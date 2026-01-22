@@ -1,3 +1,5 @@
-numpy datasets
+numpy 
+datasets
 ipykernel
 Pillow
+random
