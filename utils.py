@@ -14,14 +14,14 @@ def calculate_area_of_overlap(rect1, rect2):
 
     return (x_right - x_left) * (y_bottom - y_top)
 
-def calculate_iou(ground_truth_bbox, prediction_bbox, image_w, image_h):
+def calculate_iou(ground_truth_bbox, prediction_bbox):
     area_of_overlap = calculate_area_of_overlap(ground_truth_bbox, prediction_bbox)
     area1 = ground_truth_bbox[2] * ground_truth_bbox[3]
     area2 = ground_truth_bbox[2] * ground_truth_bbox[3]
     area_of_union = area1 + area2 - area_of_overlap
     return area_of_overlap / area_of_union if area_of_union != 0 else 0
 
-def generate_fake_bounding_box(ground_truth_bbox, ratio=0.3):
+def generate_fake_prediction(ground_truth_bbox, image_w, image_h, ratio=0.3):
     x, y, w, h = ground_truth_bbox
 
     dx = w * random.uniform(-ratio, ratio)
@@ -48,6 +48,22 @@ def generate_fake_bounding_box(ground_truth_bbox, ratio=0.3):
     h = y2 - y1
 
     if w <= 0 or h <= 0:
-        return 0, 0, 0, 0
+        return [0, 0, 0, 0],0
+    
+    # On simule un score de confiance entre 0.1 et 1.0
+    score = random.uniform(0.1, 1.0)
 
-    return x1, y1, w, h
+    return [x1, y1, w, h], score
+
+def compute_average_precision(recall, precision):
+    recall = [0.0] + recall + [1.0]
+    precision = [0.0] + precision + [0.0]
+
+    for i in range(len(precision) - 2, -1, -1):
+        precision[i] = max(precision[i], precision[i + 1])
+
+    ap = 0.0
+    for i in range(1, len(recall)):
+        ap += (recall[i] - recall[i - 1]) * precision[i]
+    
+    return ap
