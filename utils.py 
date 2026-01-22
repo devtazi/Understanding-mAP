@@ -1,0 +1,20 @@
+def calculate_area_of_overlap(rect1, rect2):
+    x1, y1, w1, h1 = rect1
+    x2, y2, w2, h2 = rect2
+
+    x_left = max(x1, x2)
+    y_top = max(y1, y2)
+    x_right = min(x1 + w1, x2 + w2)
+    y_bottom = min(y1 + h1, y2 + h2)
+
+    if x_right <= x_left or y_bottom <= y_top:
+        return 0
+
+    return (x_right - x_left) * (y_bottom - y_top)
+
+def calculate_iou(ground_truth_bbox, prediction_bbox):
+    area_of_overlap = calculate_area_of_overlap(ground_truth_bbox, prediction_bbox)
+    area1 = ground_truth_bbox[2] * ground_truth_bbox[3]
+    area2 = ground_truth_bbox[2] * ground_truth_bbox[3]
+    area_of_union = area1 + area2 - area_of_overlap
+    return area_of_overlap / area_of_union if area_of_union != 0 else 0
