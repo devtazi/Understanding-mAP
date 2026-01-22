@@ -1,4 +1,5 @@
 import random 
+import numpy as np
 
 def calculate_area_of_overlap(rect1, rect2):
     x1, y1, w1, h1 = rect1
@@ -56,14 +57,16 @@ def generate_fake_prediction(ground_truth_bbox, image_w, image_h, ratio=0.3):
     return [x1, y1, w, h], score
 
 def compute_average_precision(recall, precision):
-    recall = [0.0] + recall + [1.0]
-    precision = [0.0] + precision + [0.0]
 
-    for i in range(len(precision) - 2, -1, -1):
-        precision[i] = max(precision[i], precision[i + 1])
+    # Fermeture de la courbe
+    mrec = np.concatenate(([0.], recalls, [1.]))
+    mpre = np.concatenate(([0.], precisions, [0.]))
 
-    ap = 0.0
-    for i in range(1, len(recall)):
-        ap += (recall[i] - recall[i - 1]) * precision[i]
+    # Lissage de la courbe de précision
+    for i in range(mpre.size - 1, 0, -1):
+    mpre[i - 1] = np.maximum(mpre[i - 1], mpre[i])
     
+    # Calcul de l'aire sous la courbe
+    i = np.where(mrec[1:] != mrec[:-1])[0]
+    ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
     return ap
