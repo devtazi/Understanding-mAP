@@ -59,12 +59,12 @@ def generate_fake_prediction(ground_truth_bbox, image_w, image_h, ratio=0.3):
 def compute_average_precision(recall, precision):
 
     # Fermeture de la courbe
-    mrec = np.concatenate(([0.], recalls, [1.]))
-    mpre = np.concatenate(([0.], precisions, [0.]))
+    mrec = np.concatenate(([0.], recall, [1.]))
+    mpre = np.concatenate(([0.], precision, [0.]))
 
     # Lissage de la courbe de précision
     for i in range(mpre.size - 1, 0, -1):
-    mpre[i - 1] = np.maximum(mpre[i - 1], mpre[i])
+        mpre[i - 1] = np.maximum(mpre[i - 1], mpre[i])
     
     # Calcul de l'aire sous la courbe
     i = np.where(mrec[1:] != mrec[:-1])[0]
