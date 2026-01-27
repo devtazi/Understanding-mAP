@@ -1,7 +1,6 @@
 from datasets import load_dataset
 from prediction import simulate_prediction
 from utils import calculate_map
-import numpy as np
 import config
 
 def main():
@@ -18,7 +17,6 @@ def main():
 
    print("-" * 40)
    print(f"mAP : {map:.4f} ({map*100:.2f}%)")
+   print("=" * 40)
    
-    
-if "__name__" == "__main__.py":
-    main()
+main()

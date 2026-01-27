@@ -1,4 +1,5 @@
 from utils import calculate_iou
+from collections import defaultdict
 import random
 import config
 
@@ -37,8 +38,8 @@ def generate_fake_prediction(ground_truth_bbox, image_w, image_h, ratio=0.3):
     return [x1, y1, w, h], score
 
 def simulate_prediction(iteration):
-    prediction_results = {}
-    total_real_objects = {}
+    prediction_results = defaultdict(list)
+    total_real_objects = defaultdict(int)
 
     for img_idx in range(config.NOMBRES_IMAGES_SIMULEES):
 
@@ -49,7 +50,10 @@ def simulate_prediction(iteration):
             gt_box = objects['bbox'][obj_idx]
             category = objects['category'][obj_idx]
 
-            total_real_objects[category] += 1
+            if category not in total_real_objects.keys():
+                total_real_objects[category] = 1
+            else:
+                total_real_objects[category] += 1
 
             # Simulation d'une prédiction
             pred_box, score = generate_fake_prediction(
