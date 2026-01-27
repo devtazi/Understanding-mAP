@@ -1,4 +1,3 @@
-import random 
 import numpy as np
 
 def calculate_area_of_overlap(rect1, rect2):
@@ -22,40 +21,6 @@ def calculate_iou(ground_truth_bbox, prediction_bbox):
     area_of_union = area1 + area2 - area_of_overlap
     return area_of_overlap / area_of_union if area_of_union != 0 else 0
 
-def generate_fake_prediction(ground_truth_bbox, image_w, image_h, ratio=0.3):
-    x, y, w, h = ground_truth_bbox
-
-    dx = w * random.uniform(-ratio, ratio)
-    dy = h * random.uniform(-ratio, ratio) 
-    dw = w * random.uniform(-ratio, ratio)
-    dh = h * random.uniform(-ratio, ratio)
-
-    # On travaille avec les coins pour la suite 
-    # (x1, y1) = coin supérieur gauche
-    # (x2, y2) = coin inférieur droit
-    x1 = x + dx
-    y1 = y + dy
-    x2 = x1 + max(1, w + dw)
-    y2 = y1 + max(1, h + dh) 
-
-    # On s'assure que la nouvelle bbox reste dans l'image
-    x1 = max(0, min(x1, image_w))
-    y1 = max(0, min(y1, image_h))
-    x2 = max(0, min(x2, image_w))
-    y2 = max(0, min(y2, image_h))
-
-    # On recalcule w et h
-    w = x2 - x1
-    h = y2 - y1
-
-    if w <= 0 or h <= 0:
-        return [0, 0, 0, 0],0
-    
-    # On simule un score de confiance entre 0.1 et 1.0
-    score = random.uniform(0.1, 1.0)
-
-    return [x1, y1, w, h], score
-
 def compute_average_precision(recall, precision):
 
     # Fermeture de la courbe
@@ -70,3 +35,37 @@ def compute_average_precision(recall, precision):
     i = np.where(mrec[1:] != mrec[:-1])[0]
     ap = np.sum((mrec[i + 1] - mrec[i]) * mpre[i + 1])
     return ap
+
+def calculate_map(prediction_results, total_real_objects):
+    aps = {}
+
+    for category, preds in prediction_results.items():
+
+        # Trier par score décroissant
+        preds.sort(key=lambda x: x[0], reverse=True)
+
+        tp_cum = []
+        fp_cum = []
+
+        tp_sum = 0
+        fp_sum = 0
+
+        for _, is_tp in preds:
+            if is_tp:
+                tp_sum += 1
+            else:
+                fp_sum += 1
+
+            tp_cum.append(tp_sum)
+            fp_cum.append(fp_sum)
+
+        tp_cum = np.array(tp_cum)
+        fp_cum = np.array(fp_cum)
+
+        precisions = tp_cum / (tp_cum + fp_cum + 1e-8)
+        recalls = tp_cum / total_real_objects[category]
+
+        ap = compute_average_precision(recalls, precisions)
+        aps[category] = ap
+
+    return np.mean(list(aps.values()))
