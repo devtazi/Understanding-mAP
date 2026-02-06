@@ -17,7 +17,7 @@ def calculate_area_of_overlap(rect1, rect2):
 def calculate_iou(ground_truth_bbox, prediction_bbox):
     area_of_overlap = calculate_area_of_overlap(ground_truth_bbox, prediction_bbox)
     area1 = ground_truth_bbox[2] * ground_truth_bbox[3]
-    area2 = ground_truth_bbox[2] * ground_truth_bbox[3]
+    area2 = prediction_bbox[2] * prediction_bbox[3]
     area_of_union = area1 + area2 - area_of_overlap
     return area_of_overlap / area_of_union if area_of_union != 0 else 0
 

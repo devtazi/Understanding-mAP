@@ -50,10 +50,8 @@ def simulate_prediction(iteration):
             gt_box = objects['bbox'][obj_idx]
             category = objects['category'][obj_idx]
 
-            if category not in total_real_objects.keys():
-                total_real_objects[category] = 1
-            else:
-                total_real_objects[category] += 1
+
+            total_real_objects[category] += 1
 
             # Simulation d'une prédiction
             pred_box, score = generate_fake_prediction(
