@@ -9,7 +9,7 @@ A controlled study showing that Mean Average Precision (mAP), the metric behind 
 
 The repository reproduces both failure modes on MS-COCO, compares mAP with the optimal **LRP** metric and the **TIDE** error breakdown, and includes a from-scratch mAP implementation that matches `pycocotools` exactly.
 
-This code accompanies the paper *"On the Relevance of Mean Average Precision in Object Detection: A Controlled Experimental Study and Comparative Analysis of Alternative Metrics"* (Tazi & Glissa, L2TI, Université Sorbonne Paris Nord, 2025).
+This code accompanies the paper *"On the Relevance of Mean Average Precision in Object Detection: A Controlled Experimental Study and Comparative Analysis of Alternative Metrics"* (Tazi & Glissa, IMT Mines Alès & L2TI, Université Sorbonne Paris Nord, 2025).
 
 ## Why this matters
 
@@ -135,5 +135,5 @@ docs/figures/              Figures used in this README
 
 ## Authors
 
-Adam Tazi and Mohamed Glissa, Université Sorbonne Paris Nord, L2TI laboratory (SyCoIA team).
-Supervised by Hajer Fradi and Hicham Talaoubrid.
+Adam Tazi and Mohamed Glissa, IMT Mines Alès. 
+Supervised by Hajer Fradi and Hicham Talaoubrid from Université Sorbonne Paris Nord, L2TI laboratory.
