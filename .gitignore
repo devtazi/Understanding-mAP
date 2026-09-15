@@ -1,3 +1,17 @@
+# Environments
 env/
-__pycache__/
 venv/
+.venv/
+
+# Python build and tool artefacts
+__pycache__/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# Local files that are not part of the project
+detection_metrics/
+*.docx

@@ -1,5 +1,9 @@
-numpy 
-datasets
-ipykernel
-Pillow
-random
+# Exact versions used to produce the results in results/ and the README (Python 3.12).
+# For development, prefer `pip install -e ".[dev]"`, which uses the ranges in pyproject.toml.
+huggingface_hub==1.3.2
+matplotlib==3.10.8
+numpy==2.4.4
+pillow==12.1.0
+pyarrow==23.0.0
+pycocotools==2.0.11
+tidecv==1.0.1

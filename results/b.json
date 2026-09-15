@@ -1,0 +1,40 @@
+{
+  "scenario": "b",
+  "seed": 42,
+  "n_images": 1000,
+  "n_objects": 7538,
+  "n_detections": 37690,
+  "coco": {
+    "map": 0.7000077778411025,
+    "map50": 1.0,
+    "map75": 1.0
+  },
+  "custom": {
+    "map": 0.7000077778411028,
+    "map50": 1.0,
+    "map50_voc": 1.0,
+    "map50_uninterpolated": 1.0
+  },
+  "lrp": {
+    "olrp": 0.3553530751708434,
+    "localisation": 0.1776765375854217,
+    "false_positive": 0.0,
+    "false_negative": 0.0
+  },
+  "tide": {
+    "ap50": 1.0,
+    "main_errors": {
+      "Cls": 0.0,
+      "Loc": 0.0,
+      "Both": 0.0,
+      "Dupe": 0.0,
+      "Bkg": 0.0,
+      "Miss": 0.0
+    },
+    "special_errors": {
+      "FalsePos": 0.0,
+      "FalseNeg": 0.0
+    }
+  },
+  "tide_dominant_error": null
+}
