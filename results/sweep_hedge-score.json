@@ -1,0 +1,279 @@
+{
+  "n_images": 500,
+  "seed": 42,
+  "points": [
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.4,
+      "n_detections": 17760,
+      "map50": 1.0,
+      "map": 0.700017926893904,
+      "olrp": 0.3553530751708425,
+      "olrp_localisation": 0.17767653758542126,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.449,
+      "n_detections": 17760,
+      "map50": 1.0,
+      "map": 0.700017926893904,
+      "olrp": 0.3553530751708425,
+      "olrp_localisation": 0.17767653758542126,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.498,
+      "n_detections": 17760,
+      "map50": 1.0,
+      "map": 0.700017926893904,
+      "olrp": 0.3553530751708425,
+      "olrp_localisation": 0.17767653758542126,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.548,
+      "n_detections": 17760,
+      "map50": 1.0,
+      "map": 0.700017926893904,
+      "olrp": 0.3553530751708425,
+      "olrp_localisation": 0.17767653758542126,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.597,
+      "n_detections": 17760,
+      "map50": 1.0,
+      "map": 0.700017926893904,
+      "olrp": 0.3553530751708425,
+      "olrp_localisation": 0.17767653758542126,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.646,
+      "n_detections": 17760,
+      "map50": 1.0,
+      "map": 0.700017926893904,
+      "olrp": 0.3553530751708425,
+      "olrp_localisation": 0.17767653758542126,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.695,
+      "n_detections": 17760,
+      "map50": 1.0,
+      "map": 0.700017926893904,
+      "olrp": 0.3553530751708425,
+      "olrp_localisation": 0.17767653758542126,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.744,
+      "n_detections": 17760,
+      "map50": 1.0,
+      "map": 0.700017926893904,
+      "olrp": 0.3553530751708425,
+      "olrp_localisation": 0.17767653758542126,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.793,
+      "n_detections": 17760,
+      "map50": 1.0,
+      "map": 0.700017926893904,
+      "olrp": 0.3553530751708425,
+      "olrp_localisation": 0.17767653758542126,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.842,
+      "n_detections": 17760,
+      "map50": 1.0,
+      "map": 0.700017926893904,
+      "olrp": 0.3553530751708425,
+      "olrp_localisation": 0.17767653758542126,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.892,
+      "n_detections": 17760,
+      "map50": 0.9534001186331713,
+      "map": 0.6673954002167423,
+      "olrp": 0.45108056194924573,
+      "olrp_localisation": 0.17767653758542132,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.03903896778404004,
+        "Both": 0.001597539535364092,
+        "Dupe": 1.4595037014260014e-05,
+        "Bkg": 0.005131520879861142,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.941,
+      "n_detections": 17760,
+      "map50": 0.8008833084727336,
+      "map": 0.5605535870645337,
+      "olrp": 0.5359794679310194,
+      "olrp_localisation": 0.17782591938595677,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.15425553517953916,
+        "Both": 0.008561498462059945,
+        "Dupe": 0.00019868990929083452,
+        "Bkg": 0.027120648426803343,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    },
+    {
+      "parameter": "hedge_max_score",
+      "value": 0.99,
+      "n_detections": 17760,
+      "map50": 0.647377925422795,
+      "map": 0.4529112930223898,
+      "olrp": 0.5965837986439345,
+      "olrp_localisation": 0.17837936212910577,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.24687032954360005,
+        "Both": 0.013427331949327482,
+        "Dupe": 0.0011879093626663462,
+        "Bkg": 0.050581413757928434,
+        "Miss": 0.0
+      },
+      "prediction_iou": null
+    }
+  ]
+}

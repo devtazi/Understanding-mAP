@@ -96,6 +96,7 @@ def hedging_detector(
     rng: np.random.Generator,
     *,
     n_hedges: int = SCENARIO_B_N_HEDGES,
+    hedge_max_score: float = SCENARIO_B_HEDGE_SCORE_RANGE[1],
 ) -> list[Detection]:
     """Scenario B: one accurate box plus ``n_hedges`` low-confidence "hedging" boxes.
 
@@ -103,6 +104,11 @@ def hedging_detector(
     high score. Each hedge is displaced by 30-70% of the box size in a random direction
     on both axes and rescaled by 0.8-1.2. Over that parameter range the IoU with the
     target object is at most 0.497, so hedges can never be true positives for it.
+
+    Hedge scores are drawn from ``U(0.10, hedge_max_score)``. As long as that range stays
+    below the accurate boxes' scores, the two populations are separable by a confidence
+    threshold; raising ``hedge_max_score`` past 0.85 makes them overlap, which is the
+    situation ranking-based metrics can no longer hide (see :mod:`mapstudy.sweep`).
     """
     x, y, w, h = gt.box
     tp_box = (x + SCENARIO_B_TP_SHIFT * w, y + SCENARIO_B_TP_SHIFT * h, w, h)
@@ -114,7 +120,7 @@ def hedging_detector(
         offset = rng.uniform(*SCENARIO_B_HEDGE_OFFSET_RANGE, size=2) * rng.choice((-1, 1), size=2)
         scale = rng.uniform(*SCENARIO_B_HEDGE_SCALE_RANGE, size=2)
         box = (x + offset[0] * w, y + offset[1] * h, scale[0] * w, scale[1] * h)
-        score = float(rng.uniform(*SCENARIO_B_HEDGE_SCORE_RANGE))
+        score = float(rng.uniform(SCENARIO_B_HEDGE_SCORE_RANGE[0], hedge_max_score))
         detections.append(Detection(gt.image_id, gt.category_id, box, score))
 
     return detections

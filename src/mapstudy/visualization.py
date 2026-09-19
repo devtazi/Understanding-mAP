@@ -170,3 +170,73 @@ def plot_sweep(
         output.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(output, dpi=130, bbox_inches="tight")
     return fig
+
+
+TIDE_ERROR_COLORS = {
+    "Cls": "#a855f7",
+    "Loc": "#eab308",
+    "Both": "#f97316",
+    "Dupe": "#06b6d4",
+    "Bkg": "#ef4444",
+    "Miss": "#64748b",
+}
+
+
+def plot_tide_breakdown(
+    points: Sequence[SweepPoint],
+    *,
+    x_values: Sequence[float],
+    x_label: str,
+    title: str,
+    subtitle: str = "",
+    threshold: float | None = None,
+    threshold_label: str = "",
+    invert_x: bool = False,
+    output: Path | None = None,
+) -> Figure:
+    """Stack the AP that TIDE says each error type is responsible for, along a sweep.
+
+    Where the metric plot only shows AP collapsing, this shows *what TIDE blames it on*
+    at every point of the sweep.
+    """
+    if any(p.tide_errors is None for p in points):
+        raise ValueError("Sweep points carry no TIDE breakdown; run the sweep with with_tide=True.")
+
+    labels = list(TIDE_ERROR_COLORS)
+    stacks = [[p.tide_errors.get(label, 0.0) for p in points] for label in labels]
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.stackplot(
+        x_values,
+        *stacks,
+        labels=labels,
+        colors=[TIDE_ERROR_COLORS[label] for label in labels],
+        alpha=0.9,
+    )
+
+    if threshold is not None:
+        ax.axvline(threshold, color="#1e293b", linestyle=":", linewidth=1.5)
+        ax.annotate(
+            threshold_label,
+            xy=(threshold, 0.55),
+            xytext=(-8, 0),
+            textcoords="offset points",
+            rotation=90,
+            va="center",
+            ha="center",
+            fontsize=9,
+            color="#1e293b",
+        )
+
+    ax.set(xlabel=x_label, ylabel="AP recoverable by fixing this error type", ylim=(0, 1.05))
+    if invert_x:
+        ax.invert_xaxis()
+    ax.set_title(subtitle, fontsize=9.5, color="#475569")
+    fig.suptitle(title, fontsize=13, y=0.97)
+    ax.grid(alpha=0.2)
+    ax.legend(loc="upper left", fontsize=9, framealpha=0.9, title="TIDE error type")
+
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output, dpi=130, bbox_inches="tight")
+    return fig

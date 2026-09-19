@@ -13,6 +13,14 @@
       "precision": 1.0,
       "recall": 1.0,
       "f1": 1.0,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
       "prediction_iou": null
     },
     {
@@ -26,6 +34,14 @@
       "precision": 0.3333333333333333,
       "recall": 1.0,
       "f1": 0.5,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
       "prediction_iou": null
     },
     {
@@ -39,6 +55,14 @@
       "precision": 0.2,
       "recall": 1.0,
       "f1": 0.33333333333333337,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
       "prediction_iou": null
     },
     {
@@ -52,6 +76,14 @@
       "precision": 0.1429261226460647,
       "recall": 1.0,
       "f1": 0.2501056189269117,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
       "prediction_iou": null
     },
     {
@@ -65,6 +97,14 @@
       "precision": 0.11526105720868352,
       "recall": 1.0,
       "f1": 0.20669789636009195,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
       "prediction_iou": null
     },
     {
@@ -78,6 +118,14 @@
       "precision": 0.09827085350670908,
       "recall": 1.0,
       "f1": 0.17895558858352015,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
       "prediction_iou": null
     },
     {
@@ -91,6 +139,14 @@
       "precision": 0.08648438070658128,
       "recall": 1.0,
       "f1": 0.1592004123434103,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.0
+      },
       "prediction_iou": null
     }
   ]

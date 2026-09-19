@@ -20,8 +20,13 @@ from mapstudy.data import load_coco_images
 from mapstudy.evaluation import EvaluationReport, evaluate
 from mapstudy.reporting import format_results_table
 from mapstudy.scenarios import SCENARIOS, generate_detections
-from mapstudy.sweep import DEFAULT_HEDGE_COUNTS, DEFAULT_SHIFTS, sweep
-from mapstudy.visualization import plot_detections, plot_sweep
+from mapstudy.sweep import (
+    DEFAULT_HEDGE_COUNTS,
+    DEFAULT_HEDGE_MAX_SCORES,
+    DEFAULT_SHIFTS,
+    sweep,
+)
+from mapstudy.visualization import plot_detections, plot_sweep, plot_tide_breakdown
 
 logger = logging.getLogger("mapstudy")
 
@@ -95,6 +100,16 @@ SWEEPS = {
         "subtitle": "Scenario B, one accurate box per object plus N low-confidence boxes around it",
         "x_label": "Spurious boxes added per object",
     },
+    "hedge-score": {
+        "scenario": "b",
+        "parameter": "hedge_max_score",
+        "values": DEFAULT_HEDGE_MAX_SCORES,
+        "title": "Metrics as spurious boxes stop being separable by confidence",
+        "subtitle": "Scenario B, four spurious boxes per object, scores drawn from U(0.10, x)",
+        "x_label": "Highest score a spurious box can reach",
+        "threshold": 0.85,
+        "threshold_label": "lowest score of an accurate box",
+    },
 }
 
 
@@ -112,20 +127,35 @@ def sweep_command(args: argparse.Namespace) -> None:
     (args.output_dir / f"sweep_{args.sweep}.json").write_text(json.dumps(payload, indent=2))
 
     x_values = [p.prediction_iou if p.prediction_iou is not None else p.value for p in points]
+    common = {
+        "x_values": x_values,
+        "x_label": spec["x_label"],
+        "subtitle": spec["subtitle"],
+        "threshold": spec.get("threshold"),
+        "threshold_label": spec.get("threshold_label", ""),
+        "invert_x": spec.get("invert_x", False),
+    }
+
     figure = args.figure or Path("docs/figures") / f"sweep_{args.sweep}.png"
-    fig = plot_sweep(
-        points,
-        x_values=x_values,
-        x_label=spec["x_label"],
-        title=spec["title"],
-        subtitle=spec["subtitle"],
-        threshold=spec.get("threshold"),
-        threshold_label=spec.get("threshold_label", ""),
-        invert_x=spec.get("invert_x", False),
-        output=figure,
+    plt.close(plot_sweep(points, title=spec["title"], output=figure, **common))
+
+    # The TIDE breakdown answers a different question: not how much AP is lost, but why.
+    tide_figure = figure.with_name(f"{figure.stem}_tide{figure.suffix}")
+    plt.close(
+        plot_tide_breakdown(
+            points,
+            title="What TIDE blames the lost AP on",
+            output=tide_figure,
+            **common,
+        )
     )
-    plt.close(fig)
-    logger.info("Sweep written to %s and %s", args.output_dir / f"sweep_{args.sweep}.json", figure)
+
+    logger.info(
+        "Sweep written to %s, %s and %s",
+        args.output_dir / f"sweep_{args.sweep}.json",
+        figure,
+        tide_figure,
+    )
 
 
 def _build_parser() -> argparse.ArgumentParser:

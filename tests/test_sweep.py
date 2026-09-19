@@ -66,3 +66,26 @@ def test_sweep_point_serialises(images):
     payload = point.to_dict()
     assert payload["parameter"] == "shift"
     assert payload["prediction_iou"] == pytest.approx(diagonal_shift_iou(0.2))
+
+
+def test_overlapping_scores_make_hedging_visible_to_ranking_metrics(images):
+    """The blindness of scenario B depends on score separation, not on the metric."""
+    separable, overlapping = sweep(images, "b", "hedge_max_score", [0.4, 0.99], seed=0)
+
+    assert separable.map50 == pytest.approx(1.0)
+    assert overlapping.map50 < 0.8
+    assert overlapping.olrp > separable.olrp
+    # The detector emits exactly the same boxes: only their scores changed.
+    assert separable.n_detections == overlapping.n_detections
+    assert separable.f1 == pytest.approx(overlapping.f1)
+
+
+def test_sweep_carries_tide_breakdown(images):
+    point = sweep(images, "a", "shift", [0.25], seed=0)[0]
+    assert point.tide_errors is not None
+    assert point.tide_errors["Loc"] > 0.5
+    assert max(v for k, v in point.tide_errors.items() if k != "Loc") < 0.05
+
+
+def test_sweep_can_skip_tide(images):
+    assert sweep(images, "a", "shift", [0.25], seed=0, with_tide=False)[0].tide_errors is None

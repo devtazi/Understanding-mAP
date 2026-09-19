@@ -64,22 +64,47 @@ mAP@[.50:.95] = 0.700 in scenario B is not a coincidence. With IoU ≈ 0.82, the
 
 ## Sweeps: the shape of each metric's response
 
-Two scenarios give two numbers. Sweeping the parameter that drives each one shows *how* the metrics respond. Both sweeps use 500 images and seed 42 (`mapstudy sweep shift`, `mapstudy sweep hedges`); the raw points are in [`results/`](results/).
+Two scenarios give two numbers. Sweeping the parameter that drives each one shows *how* the metrics respond. All sweeps use 500 images (3,552 objects) and seed 42 (`mapstudy sweep shift | hedges | hedge-score`); the raw points are in [`results/`](results/).
 
 ### Localisation error: a cliff, not a slope
 
 ![Metrics as localisation degrades](docs/figures/sweep_shift.png)
 
-Every box is shifted diagonally by a growing fraction of its size, so the IoU of *every* prediction is known exactly and decreases from 1.0 to 0.22.
+Every box is shifted diagonally by a growing fraction of its size, so the IoU of *every* prediction is known exactly and decreases from 1.0 to 0.09.
 
-| IoU of every prediction | 0.68 | 0.55 | 0.51 | **0.47** | 0.44 |
+| IoU of every prediction | 0.68 | 0.57 | 0.52 | **0.47** | 0.43 |
 |---|---:|---:|---:|---:|---:|
-| mAP@0.50 | 1.000 | 0.995 | 0.993 | **0.003** | 0.003 |
-| oLRP | 0.639 | 0.910 | 0.986 | **0.999** | 0.999 |
+| mAP@0.50 | 1.000 | 0.996 | 0.994 | **0.003** | 0.003 |
+| oLRP | 0.639 | 0.869 | 0.968 | **0.999** | 0.999 |
 
-mAP@0.50 stays at essentially 1.0 while localisation quality drops by half, then collapses to zero between two adjacent points. It carries **no information at all** about localisation on either side of the threshold: it only reports which side of 0.5 the boxes are on. mAP@[.50:.95] degrades in visible 0.1 steps, one per threshold crossed — it is a staircase, not a curve.
+mAP@0.50 stays at essentially 1.0 while localisation quality drops by a third, then collapses to zero between two adjacent points. It carries **no information at all** about localisation on either side of the threshold: it only reports which side of 0.5 the boxes are on. mAP@[.50:.95] degrades in visible 0.1 steps, one per threshold crossed — it is a staircase, not a curve.
 
 oLRP is the only metric that moves continuously. But note its own threshold artefact: it saturates near 1.0 just before the cliff, because its localisation term is normalised by `1 − 0.5`, the same IoU threshold.
+
+### What TIDE adds: not how much is lost, but why
+
+![What TIDE blames the lost AP on](docs/figures/sweep_shift_tide.png)
+
+This is the same sweep, showing how much AP TIDE says each error type is responsible for. It answers the question mAP cannot: at IoU = 0.47, where mAP reports 0.003 and says nothing more, TIDE states that **98.3% of the lost AP would be recovered by fixing localisation alone** — every other error type is at zero. That is the practical difference between a score and a diagnosis.
+
+The figure also shows a limit of TIDE itself. Below IoU = 0.1, its background threshold, a prediction stops being a mislocalised box and becomes a spurious one: the attribution to `Loc` collapses from 0.90 to 0.05 and **nothing takes its place**. TIDE measures the AP recovered by fixing *one* error type at a time, and there the detector is wrong in two ways at once — the box is spurious and the object is missed — so no single fix recovers anything. Roughly 0.94 of lost AP is then attributed to nothing at all.
+
+### When does hedging actually become visible?
+
+![Metrics as spurious boxes stop being separable by confidence](docs/figures/sweep_hedge-score.png)
+
+The sweep above showed that adding spurious boxes changes nothing. This one shows *why*, and when that stops being true. Four spurious boxes per object are kept, but their scores are drawn from U(0.10, x) with x growing towards the 0.85–0.95 range of the accurate boxes.
+
+| Highest score of a spurious box | 0.40 | 0.84 | **0.89** | 0.94 | 0.99 |
+|---|---:|---:|---:|---:|---:|
+| mAP@0.50 | 1.000 | 1.000 | **0.953** | 0.801 | 0.647 |
+| mAP@[.50:.95] | 0.700 | 0.700 | **0.667** | 0.561 | 0.453 |
+| oLRP | 0.355 | 0.355 | **0.451** | 0.536 | 0.597 |
+| oLRP localisation | 0.178 | 0.178 | 0.178 | 0.178 | 0.178 |
+
+Nothing moves until the two score populations start to overlap, then every ranking metric degrades at once. **What these metrics measure is not whether a detector emits redundant boxes, but whether its confidence scores are well calibrated enough to separate them.**
+
+That is the precise sense in which oLRP does not solve the hedging problem. oLRP is a *minimum over confidence thresholds*: it reports the quality of the detector at the threshold that suits it best. As long as the spurious boxes score below that threshold, they are invisible by construction, no matter how many there are. The hedging is not absent from the metric, it is displaced into the optimal threshold τ\* that oLRP reports alongside its score — a number leaderboards ignore. Note also that `oLRP localisation` stays fixed at 0.178 throughout: even when the total oLRP degrades, the degradation is entirely in its false-positive term.
 
 ### Redundant predictions: every ranking metric is blind
 
@@ -126,8 +151,9 @@ COCO 2017 annotations are read from the [`HichTala/coco`](https://huggingface.co
 ```bash
 mapstudy run --all                         # every scenario, 1,000 images, writes results/
 mapstudy run --scenario a b --n-images 200 --seed 0
-mapstudy sweep shift                       # metrics vs localisation error
+mapstudy sweep shift                       # metrics vs localisation error, plus TIDE breakdown
 mapstudy sweep hedges                      # metrics vs number of redundant boxes
+mapstudy sweep hedge-score                 # metrics vs how separable those boxes are
 mapstudy visualize --scenario b --image-index 5
 pytest                                     # offline, no dataset download
 ```
