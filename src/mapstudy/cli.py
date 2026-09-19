@@ -3,6 +3,7 @@
 mapstudy run --scenario a b            # evaluate scenarios A and B
 mapstudy run --all --n-images 1000     # reproduce the results table
 mapstudy visualize --scenario b        # draw one image with its predictions
+mapstudy sweep shift                   # plot every metric against localisation error
 """
 
 from __future__ import annotations
@@ -19,12 +20,14 @@ from mapstudy.data import load_coco_images
 from mapstudy.evaluation import EvaluationReport, evaluate
 from mapstudy.reporting import format_results_table
 from mapstudy.scenarios import SCENARIOS, generate_detections
-from mapstudy.visualization import plot_detections
+from mapstudy.sweep import DEFAULT_HEDGE_COUNTS, DEFAULT_SHIFTS, sweep
+from mapstudy.visualization import plot_detections, plot_sweep
 
 logger = logging.getLogger("mapstudy")
 
 DEFAULT_SEED = 42
 DEFAULT_N_IMAGES = 1000
+DEFAULT_SWEEP_N_IMAGES = 500
 
 
 def main(argv: Sequence[str] | None = None) -> None:
@@ -73,6 +76,58 @@ def visualize(args: argparse.Namespace) -> None:
     logger.info("Figure written to %s", output)
 
 
+SWEEPS = {
+    "shift": {
+        "scenario": "a",
+        "values": DEFAULT_SHIFTS,
+        "title": "Metrics as localisation degrades",
+        "subtitle": "Scenario A, every box shifted diagonally by a growing fraction of its size",
+        "x_label": "IoU of every prediction with its target object",
+        "threshold": 0.5,
+        "threshold_label": "IoU threshold of mAP@0.50",
+        "invert_x": True,
+    },
+    "hedges": {
+        "scenario": "b",
+        "parameter": "n_hedges",
+        "values": DEFAULT_HEDGE_COUNTS,
+        "title": "Metrics as redundant predictions pile up",
+        "subtitle": "Scenario B, one accurate box per object plus N low-confidence boxes around it",
+        "x_label": "Spurious boxes added per object",
+    },
+}
+
+
+def sweep_command(args: argparse.Namespace) -> None:
+    spec = SWEEPS[args.sweep]
+    parameter = spec.get("parameter", args.sweep)
+    logger.info("Loading %d annotated COCO 2017 images...", args.n_images)
+    images = load_coco_images(args.n_images)
+
+    logger.info("Sweeping %s over %d values...", parameter, len(spec["values"]))
+    points = sweep(images, spec["scenario"], parameter, spec["values"], seed=args.seed)
+
+    args.output_dir.mkdir(parents=True, exist_ok=True)
+    payload = {"n_images": len(images), "seed": args.seed, "points": [p.to_dict() for p in points]}
+    (args.output_dir / f"sweep_{args.sweep}.json").write_text(json.dumps(payload, indent=2))
+
+    x_values = [p.prediction_iou if p.prediction_iou is not None else p.value for p in points]
+    figure = args.figure or Path("docs/figures") / f"sweep_{args.sweep}.png"
+    fig = plot_sweep(
+        points,
+        x_values=x_values,
+        x_label=spec["x_label"],
+        title=spec["title"],
+        subtitle=spec["subtitle"],
+        threshold=spec.get("threshold"),
+        threshold_label=spec.get("threshold_label", ""),
+        invert_x=spec.get("invert_x", False),
+        output=figure,
+    )
+    plt.close(fig)
+    logger.info("Sweep written to %s and %s", args.output_dir / f"sweep_{args.sweep}.json", figure)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mapstudy",
@@ -98,6 +153,16 @@ def _build_parser() -> argparse.ArgumentParser:
     viz_parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     viz_parser.add_argument("--output", type=Path, help="Defaults to docs/figures/scenario_<name>.jpg")
     viz_parser.set_defaults(handler=visualize)
+
+    sweep_parser = subparsers.add_parser(
+        "sweep", help="Vary one scenario parameter and plot how each metric responds."
+    )
+    sweep_parser.add_argument("sweep", choices=SWEEPS, help="Parameter to sweep.")
+    sweep_parser.add_argument("--n-images", type=_positive_int, default=DEFAULT_SWEEP_N_IMAGES)
+    sweep_parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    sweep_parser.add_argument("--output-dir", type=Path, default=Path("results"))
+    sweep_parser.add_argument("--figure", type=Path, help="Defaults to docs/figures/sweep_<name>.png")
+    sweep_parser.set_defaults(handler=sweep_command)
 
     return parser
 

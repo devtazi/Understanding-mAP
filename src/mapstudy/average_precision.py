@@ -140,6 +140,58 @@ def mean_average_precision(
     return MeanAveragePrecision(value, per_category)
 
 
+@dataclass(frozen=True)
+class OperatingPoint:
+    """Counts and rates of a detector used at one fixed confidence threshold."""
+
+    score_threshold: float
+    true_positives: int
+    false_positives: int
+    false_negatives: int
+
+    @property
+    def precision(self) -> float:
+        predicted = self.true_positives + self.false_positives
+        return self.true_positives / predicted if predicted else 0.0
+
+    @property
+    def recall(self) -> float:
+        actual = self.true_positives + self.false_negatives
+        return self.true_positives / actual if actual else 0.0
+
+    @property
+    def f1(self) -> float:
+        total = self.precision + self.recall
+        return 2 * self.precision * self.recall / total if total else 0.0
+
+
+def operating_point(
+    ground_truths: Iterable[GroundTruth],
+    detections: Iterable[Detection],
+    score_threshold: float,
+    iou_threshold: float = 0.5,
+    max_detections: int = COCO_MAX_DETECTIONS,
+) -> OperatingPoint:
+    """Evaluate a detector as it would actually be deployed: at one confidence threshold.
+
+    Unlike AP, which only sees the *ranking* of scores, this counts every detection kept
+    by the threshold. It is what makes redundant predictions visible.
+    """
+    gts_by_category = _group_by_category(ground_truths)
+    dts_by_category = _group_by_category(d for d in detections if d.score >= score_threshold)
+
+    true_positives = false_positives = 0
+    for category_id in gts_by_category.keys() | dts_by_category.keys():
+        gts_by_image = _group_by_image(gts_by_category.get(category_id, []))
+        for image_id, image_dts in _group_by_image(dts_by_category.get(category_id, [])).items():
+            _, is_tp = _match_image(image_dts, gts_by_image.get(image_id, []), iou_threshold, max_detections)
+            true_positives += int(is_tp.sum())
+            false_positives += int((~is_tp).sum())
+
+    n_gts = sum(len(gts) for gts in gts_by_category.values())
+    return OperatingPoint(score_threshold, true_positives, false_positives, n_gts - true_positives)
+
+
 def _match_image(
     detections: Sequence[Detection],
     ground_truths: Sequence[GroundTruth],

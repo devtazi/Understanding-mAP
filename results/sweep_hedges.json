@@ -1,0 +1,97 @@
+{
+  "n_images": 500,
+  "seed": 42,
+  "points": [
+    {
+      "parameter": "n_hedges",
+      "value": 0.0,
+      "n_detections": 3552,
+      "map50": 1.0,
+      "map": 0.699861753926872,
+      "olrp": 0.35546254967750596,
+      "olrp_localisation": 0.17773127483875298,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "prediction_iou": null
+    },
+    {
+      "parameter": "n_hedges",
+      "value": 2.0,
+      "n_detections": 10656,
+      "map50": 1.0,
+      "map": 0.6998280020309723,
+      "olrp": 0.355328460947794,
+      "olrp_localisation": 0.177664230473897,
+      "precision": 0.3333333333333333,
+      "recall": 1.0,
+      "f1": 0.5,
+      "prediction_iou": null
+    },
+    {
+      "parameter": "n_hedges",
+      "value": 4.0,
+      "n_detections": 17760,
+      "map50": 1.0,
+      "map": 0.700017926893904,
+      "olrp": 0.3553530751708425,
+      "olrp_localisation": 0.17767653758542126,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "prediction_iou": null
+    },
+    {
+      "parameter": "n_hedges",
+      "value": 6.0,
+      "n_detections": 24864,
+      "map50": 1.0,
+      "map": 0.699527611784847,
+      "olrp": 0.35543793545445734,
+      "olrp_localisation": 0.17771896772722867,
+      "precision": 0.1429261226460647,
+      "recall": 1.0,
+      "f1": 0.2501056189269117,
+      "prediction_iou": null
+    },
+    {
+      "parameter": "n_hedges",
+      "value": 8.0,
+      "n_detections": 31968,
+      "map50": 1.0,
+      "map": 0.6997810357958872,
+      "olrp": 0.3553284609477941,
+      "olrp_localisation": 0.17766423047389704,
+      "precision": 0.11526105720868352,
+      "recall": 1.0,
+      "f1": 0.20669789636009195,
+      "prediction_iou": null
+    },
+    {
+      "parameter": "n_hedges",
+      "value": 10.0,
+      "n_detections": 39072,
+      "map50": 1.0,
+      "map": 0.6998981309713765,
+      "olrp": 0.355328460947794,
+      "olrp_localisation": 0.177664230473897,
+      "precision": 0.09827085350670908,
+      "recall": 1.0,
+      "f1": 0.17895558858352015,
+      "prediction_iou": null
+    },
+    {
+      "parameter": "n_hedges",
+      "value": 12.0,
+      "n_detections": 46176,
+      "map50": 1.0,
+      "map": 0.6997455094936222,
+      "olrp": 0.3553284609477941,
+      "olrp_localisation": 0.17766423047389704,
+      "precision": 0.08648438070658128,
+      "recall": 1.0,
+      "f1": 0.1592004123434103,
+      "prediction_iou": null
+    }
+  ]
+}

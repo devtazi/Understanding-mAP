@@ -1,4 +1,4 @@
-"""Figures showing what each synthetic detector actually predicts."""
+"""Figures: what each synthetic detector predicts, and how the metrics respond to it."""
 
 from __future__ import annotations
 
@@ -12,10 +12,18 @@ from matplotlib.patches import Rectangle
 
 from mapstudy.boxes import Box, iou
 from mapstudy.data import Detection, ImageRecord
+from mapstudy.sweep import SweepPoint
 
 GT_COLOR = "#22c55e"
 MATCHED_COLOR = "#3b82f6"
 UNMATCHED_COLOR = "#ef4444"
+
+METRIC_STYLES = {
+    "map50": ("mAP@0.50", "#2563eb", "-"),
+    "map": ("mAP@[0.50:0.95]", "#7c3aed", "-"),
+    "lrp_quality": ("1 − oLRP", "#059669", "-"),
+    "f1": ("F1 at score ≥ 0.05", "#ea580c", "--"),
+}
 
 
 def plot_detections(
@@ -96,3 +104,69 @@ def plot_detections(
 def _rectangle(box: Box, color: str, *, linestyle: str, linewidth: float) -> Rectangle:
     x, y, w, h = box
     return Rectangle((x, y), w, h, fill=False, edgecolor=color, linestyle=linestyle, linewidth=linewidth)
+
+
+def plot_sweep(
+    points: Sequence[SweepPoint],
+    *,
+    x_values: Sequence[float],
+    x_label: str,
+    title: str,
+    subtitle: str = "",
+    threshold: float | None = None,
+    threshold_label: str = "",
+    invert_x: bool = False,
+    output: Path | None = None,
+) -> Figure:
+    """Plot every metric against the swept parameter.
+
+    All four curves are oriented so that higher is better, which is why oLRP is shown as
+    ``1 − oLRP``: the four lines are then directly comparable.
+    """
+    series = {
+        "map50": [p.map50 for p in points],
+        "map": [p.map for p in points],
+        "lrp_quality": [1 - p.olrp if p.olrp is not None else 0.0 for p in points],
+        "f1": [p.f1 for p in points],
+    }
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    for key, values in series.items():
+        label, color, linestyle = METRIC_STYLES[key]
+        ax.plot(
+            x_values,
+            values,
+            label=label,
+            color=color,
+            linestyle=linestyle,
+            linewidth=2,
+            marker="o",
+            markersize=3.5,
+        )
+
+    if threshold is not None:
+        ax.axvline(threshold, color="#64748b", linestyle=":", linewidth=1.5)
+        ax.annotate(
+            threshold_label,
+            xy=(threshold, 0.55),
+            xytext=(-8, 0),
+            textcoords="offset points",
+            rotation=90,
+            va="center",
+            ha="center",
+            fontsize=9,
+            color="#475569",
+        )
+
+    ax.set(xlabel=x_label, ylabel="Metric value (higher is better)", ylim=(-0.02, 1.05))
+    if invert_x:
+        ax.invert_xaxis()
+    ax.set_title(subtitle, fontsize=9.5, color="#475569")
+    fig.suptitle(title, fontsize=13, y=0.97)
+    ax.grid(alpha=0.25)
+    ax.legend(loc="best", fontsize=9, framealpha=0.9)
+
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output, dpi=130, bbox_inches="tight")
+    return fig

@@ -56,11 +56,47 @@ The full reports, with every TIDE error type, are in [`results/`](results/).
 
 **Scenario A: mAP gives the harshest possible verdict.** Every box visibly covers its object, yet mAP is essentially zero. The few true positives (mAP@.50 = 0.001) are predictions that happen to overlap *another* object of the same class by more than 0.5. mAP only says that the detector fails. TIDE says why: fixing localisation errors (`Loc`) would recover 98.6 of the 99.9 AP points lost.
 
-**Scenario B: mAP rewards hedging.** All four spurious boxes score below every accurate box, so they only appear in the ranking once recall has already reached 1. The precision-recall curve is never lowered and mAP@.50 is perfect. Interpolation plays no role here: the uninterpolated AP is also 1.000. TIDE finds **no error to fix** for the same reason: it measures errors by the AP gained after fixing them, and there is none to gain. Only oLRP, which picks the optimal confidence threshold, reports the residual localisation error (0.178) and, implicitly, a threshold that discards all 30,152 spurious boxes.
+**Scenario B: mAP rewards hedging.** All four spurious boxes score below every accurate box, so they only appear in the ranking once recall has already reached 1. The precision-recall curve is never lowered and mAP@.50 is perfect. Interpolation plays no role here: the uninterpolated AP is also 1.000. TIDE finds **no error to fix** for the same reason: it measures errors by the AP gained after fixing them, and there is none to gain. oLRP does report a non-perfect score (0.355), but only because of the residual localisation error (0.178) of the accurate boxes; it too ignores the spurious ones, since it evaluates at the confidence threshold that discards them. The sweep below shows that none of these metrics moves at all when the hedging gets worse.
 
 mAP@[.50:.95] = 0.700 in scenario B is not a coincidence. With IoU ≈ 0.82, the accurate boxes are true positives for the 7 thresholds from 0.50 to 0.80 and false positives for the 3 above.
 
 **Interpolation.** On the baseline, removing the monotone envelope lowers mAP@.50 from 0.638 to 0.611. The "no interpolation" row is not a standard metric; it shows how much the smoothing hides.
+
+## Sweeps: the shape of each metric's response
+
+Two scenarios give two numbers. Sweeping the parameter that drives each one shows *how* the metrics respond. Both sweeps use 500 images and seed 42 (`mapstudy sweep shift`, `mapstudy sweep hedges`); the raw points are in [`results/`](results/).
+
+### Localisation error: a cliff, not a slope
+
+![Metrics as localisation degrades](docs/figures/sweep_shift.png)
+
+Every box is shifted diagonally by a growing fraction of its size, so the IoU of *every* prediction is known exactly and decreases from 1.0 to 0.22.
+
+| IoU of every prediction | 0.68 | 0.55 | 0.51 | **0.47** | 0.44 |
+|---|---:|---:|---:|---:|---:|
+| mAP@0.50 | 1.000 | 0.995 | 0.993 | **0.003** | 0.003 |
+| oLRP | 0.639 | 0.910 | 0.986 | **0.999** | 0.999 |
+
+mAP@0.50 stays at essentially 1.0 while localisation quality drops by half, then collapses to zero between two adjacent points. It carries **no information at all** about localisation on either side of the threshold: it only reports which side of 0.5 the boxes are on. mAP@[.50:.95] degrades in visible 0.1 steps, one per threshold crossed — it is a staircase, not a curve.
+
+oLRP is the only metric that moves continuously. But note its own threshold artefact: it saturates near 1.0 just before the cliff, because its localisation term is normalised by `1 − 0.5`, the same IoU threshold.
+
+### Redundant predictions: every ranking metric is blind
+
+![Metrics as redundant predictions pile up](docs/figures/sweep_hedges.png)
+
+Here the number of low-confidence boxes added around each object grows from 0 to 12, i.e. from 3,552 to 46,176 detections for the same 3,552 objects.
+
+| Spurious boxes per object | 0 | 4 | 8 | 12 |
+|---|---:|---:|---:|---:|
+| mAP@0.50 | 1.000 | 1.000 | 1.000 | 1.000 |
+| mAP@[.50:.95] | 0.700 | 0.700 | 0.700 | 0.700 |
+| oLRP | 0.355 | 0.355 | 0.355 | 0.355 |
+| F1 at score ≥ 0.05 | 1.000 | 0.333 | 0.207 | 0.159 |
+
+**Not a single ranking-based metric reacts**, to three decimal places, while the detector emits thirteen times more boxes. This is a stronger statement than the one usually made about mAP: the blindness is not specific to mAP, it is shared by oLRP and TIDE, because all of them evaluate a *ranking* and are free to choose where to cut it.
+
+Only a metric evaluated at a fixed operating point — the way a detector is actually deployed — reacts: F1 falls from 1.000 to 0.159. Any comparison of detectors on mAP alone should therefore be accompanied by an operating-point metric.
 
 ## Metrics
 
@@ -69,6 +105,7 @@ mAP@[.50:.95] = 0.700 in scenario B is not a coincidence. With IoU ≈ 0.82, the
 | **mAP@.50, mAP@[.50:.95]** | [`pycocotools`](https://github.com/cocodataset/cocoapi) and [`average_precision.py`](src/mapstudy/average_precision.py) | Standard leaderboard metric. The from-scratch version exposes the interpolation scheme and is tested to match `pycocotools` to 1e-9. |
 | **oLRP** and its components | [`third_party/cocoeval_lrp.py`](src/mapstudy/third_party/cocoeval_lrp.py) ([Oksuz et al., 2018](https://arxiv.org/abs/1807.01696)) | Separates localisation, false-positive and false-negative error at the optimal confidence threshold. |
 | **TIDE** | [`tidecv`](https://github.com/dbolya/tide) ([Bolya et al., 2020](https://dbolya.github.io/tide/)) | Attributes lost AP to `Cls`, `Loc`, `Both`, `Dupe`, `Bkg` and `Miss` errors. |
+| **Precision, recall, F1 at a fixed score threshold** | [`average_precision.py`](src/mapstudy/average_precision.py) | Evaluates the detector at one operating point, as it would be deployed. The only metric here that counts redundant predictions. |
 
 ```
 LRP(τ) = [ Σ_TP (1 − IoU) / (1 − 0.5) + FP(τ) + FN(τ) ] / [ TP(τ) + FP(τ) + FN(τ) ]
@@ -89,6 +126,8 @@ COCO 2017 annotations are read from the [`HichTala/coco`](https://huggingface.co
 ```bash
 mapstudy run --all                         # every scenario, 1,000 images, writes results/
 mapstudy run --scenario a b --n-images 200 --seed 0
+mapstudy sweep shift                       # metrics vs localisation error
+mapstudy sweep hedges                      # metrics vs number of redundant boxes
 mapstudy visualize --scenario b --image-index 5
 pytest                                     # offline, no dataset download
 ```
@@ -102,8 +141,9 @@ src/mapstudy/
 ├── boxes.py               IoU and box geometry
 ├── data.py                Data structures and COCO loading
 ├── scenarios.py           Synthetic detectors (baseline, A, B)
-├── average_precision.py   From-scratch AP / mAP with COCO matching and selectable interpolation
+├── average_precision.py   From-scratch AP / mAP and fixed-threshold operating points
 ├── evaluation.py          pycocotools, custom mAP, oLRP and TIDE on the same predictions
+├── sweep.py               Parameter sweeps behind the two curves above
 ├── reporting.py           Results table
 ├── visualization.py       Figures
 ├── cli.py                 `mapstudy` command
@@ -118,6 +158,7 @@ docs/figures/              Figures used in this README
 
 - The synthetic detectors produce clean, isolated failure modes. Real detectors mix several error types.
 - The first images of the train split are used rather than a random sample, which can bias the category distribution.
+- The operating point is reported at a single, arbitrary score threshold (0.05). A full precision-recall-vs-threshold analysis would be more informative.
 - mAP, oLRP and TIDE all rely on the same one-to-one matching between predictions and ground truths. In crowded scenes, the matching itself can dominate the result, as the few true positives of scenario A show.
 - Everything is evaluated at the bounding-box level only.
 
