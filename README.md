@@ -15,25 +15,53 @@ detection leaderboard. It does two things, in order:
    identifying which part of each metric carries the information mAP loses, and where
    those metrics fail in turn.
 
-The central experiment reproduces, on real data, the situation Oksuz et al. describe in
-Fig. 1 of the LRP paper: *"Despite these very different characteristics, the APs of
-these differently-behaving detectors are exactly the same (AP=0.5)"* [5]. Three
-detectors are built to fail in three mutually exclusive ways, then calibrated until they
-share the same score. One reports 1,837 boxes and every one of them is exact. Another
-reports 8,533 boxes of which 58% are spurious. The third reports 3,552 boxes and
-misplaces 35% of them. **All three score mAP@0.50 = 0.500.** The number is identical;
-the detectors are not comparable. oLRP's components and TIDE's breakdown separate them.
+## Start here: two detectors and their scores
 
-This code accompanies the paper *"On the Relevance of Mean Average Precision in Object
-Detection: A Controlled Experimental Study and Comparative Analysis of Alternative
-Metrics"* (Tazi & Glissa, IMT Mines Alès & L2TI, Université Sorbonne Paris Nord, 2025).
+Before any parameter sweep, two pictures. Both are real COCO images, both show what a
+detector predicted, and both come with the mAP that detector obtained over 1,000 images.
+
+| ![Scenario B](docs/figures/scenario_b.jpg) | ![Scenario A](docs/figures/scenario_a.jpg) |
+|:---:|:---:|
+| **Scenario B.** Five boxes per object, four of them nowhere near it. | **Scenario A.** One box per object, each visibly covering it. |
+| **mAP@0.50 = 1.000** | **mAP@0.50 = 0.001** |
+| The highest score the metric can award. | Indistinguishable from a detector that found nothing. |
+
+A detector nobody would deploy is given a perfect score, and a detector whose every box
+lands on its object is told it failed completely. The ordering the metric produces is
+the reverse of the one a person looking at the images would produce.
+
+**Why scenario B scores 1.000.** Each object receives one accurate box at a high
+confidence (IoU around 0.82, score in U(0.85, 0.95)) and four displaced boxes at low
+confidence (IoU at most 0.497 by construction, score in U(0.10, 0.40)). This pattern has
+a name in the literature, *spatial hedging*; it is defined and cited in experiment 3.
+Average Precision ranks all detections by confidence and integrates precision against
+recall. The four spurious boxes rank below every accurate box, so they only enter the
+curve once recall has already reached 1 and there is no precision left to lose. They
+cost nothing.
+Note that this is not an artefact of interpolation: the uninterpolated AP is also 1.000.
+
+**Why scenario A scores 0.001.** Every box keeps its object's size and is shifted by 20%
+of its width and height, which puts the IoU at exactly 0.471 for every object regardless
+of its size. The COCO matching rule counts a prediction as correct only above IoU 0.50.
+At 0.471 every prediction is therefore a false positive, and every object simultaneously
+a false negative. The handful of true positives that remain are predictions that happen
+to overlap a *different* object of the same class by more than 0.5.
+
+Neither failure is a bug in the implementation: both are reproduced here against
+`pycocotools` itself, and this project's from-scratch mAP agrees with it to 1e-9. They
+are properties of the metric's definition.
+
+These two scenarios are the starting point of the study, not its conclusion. Each is one
+point on a curve, and Part 1 turns each into a controlled sweep: experiment 2 varies the
+shift of scenario A continuously, experiment 3 varies the number of low-confidence boxes
+scenario B adds. Experiment 1 then shows the more general problem behind both.
 
 ## How a metric is judged here
 
 Three criteria organise the critique. They are the framework of the accompanying paper
 and of the oral presentation it is drawn from; the individual shortcomings they group
-together are those enumerated for AP by Oksuz et al. [5] and, for redundant predictions,
-by Jena et al. [10].
+together are those enumerated for AP by Oksuz et al. [6] and, for redundant predictions,
+by Jena et al. [3].
 
 **Completeness.** A metric is complete when it accounts for the three ways a detector
 can fail: imprecise localisation, false positives and false negatives. An incomplete
@@ -49,11 +77,11 @@ detector is bad and nothing about what to change. The same is true of a high one
 sensibly on rare categories and small validation sets, and it should help set the
 confidence threshold at which the detector will actually run - which, as Oksuz et al.
 note, is not optional: *"in a practical application, the detections are usually required
-to be filtered owing to response time limitations"* [5].
+to be filtered owing to response time limitations"* [6].
 
 mAP is examined against each in turn, then oLRP and TIDE are put through the same three.
 
-## The experiment
+## Method
 
 Predictions are not produced by a trained detector. They are derived from MS-COCO
 ground-truth boxes by seeded perturbation functions ([`scenarios.py`](src/mapstudy/scenarios.py)),
@@ -61,16 +89,31 @@ so every result traces back to a known prediction pattern and reproduces exactly
 a detector needs a knob set to a particular value, the knob is *solved for* by bisection
 rather than chosen by hand ([`equivalence.py`](src/mapstudy/equivalence.py)).
 
-Unless stated otherwise: first 500 annotated images of COCO 2017 train, 3,552 objects,
-seed 42.
+Three synthetic detectors recur throughout, and one more family is introduced in
+experiment 1:
+
+| Name | Construction | Used in |
+|---|---|---|
+| **Scenario A** | every box shifted by 20% of its size, high confidence | opening, exp. 2, 8 |
+| **Scenario B** | one accurate box plus four low-confidence displaced boxes per object | opening, exp. 3 |
+| **Baseline** | every coordinate jittered by up to 25% of the box size, confidence drawn from U(0.1, 1.0) independently of the IoU, so the ranking is uninformative | exp. 5, 6, 10 |
+
+Unless stated otherwise, results use the first 500 annotated images of COCO 2017 train
+(3,552 objects) with seed 42. The reference table at the end of this README uses the
+first 1,000 images (7,538 objects), as do the two figures above; where a number differs
+between the two, the difference is the sample, not the method.
 
 ---
 
-# Part 1 - What mAP cannot see
+# Part 1 - The case against mAP
 
-## 1. Completeness: one score, three detectors
+## 1. mAP cannot distinguish detectors that fail in opposite ways
 
 ![Three detectors, one mAP](docs/figures/equivalence.png)
+
+The opening showed two detectors whose scores are misleading. This experiment shows the
+structural reason: many different detectors share one score, so the score cannot be read
+backwards.
 
 Three detectors are constructed, each committing exactly one kind of error and no other.
 Every box meant to be correct is the ground-truth box itself, so localisation noise
@@ -95,7 +138,7 @@ thing ten times.
 This is not a claim that mAP is sometimes misleading. It is the statement that mAP is
 **not injective**: the map from detector behaviour to score cannot be inverted, and a
 leaderboard position is therefore compatible with any of these three detectors. Which one
-you shipped is not recoverable from the number.
+was shipped is not recoverable from the number.
 
 The practical consequence is the one that matters. Told only that a detector scores
 0.500, a practitioner cannot know whether to work on recall, on precision or on box
@@ -105,20 +148,21 @@ information: not that the number is wrong, but that it is only a number, and tha
 question a practitioner actually has when a score is low - where does the loss come
 from, and what should change - is one mAP is not built to answer. Oksuz et al. list this
 first among AP's shortcomings: the *"inability to distinguish very different RP
-curves"* [5].
+curves"* [6].
 
-Reproduce with `mapstudy equivalence`. The reference illustration of this problem is
-Fig. 1 of [Oksuz et al. (2018)](https://arxiv.org/abs/1807.01696); what is added here is
-that the equality is *solved for* rather than drawn, on real data, with the error
-profiles known exactly.
+The reference illustration of the problem is Fig. 1 of the LRP paper, where three
+sketched detectors all reach AP = 0.5: *"Despite these very different characteristics,
+the APs of these differently-behaving detectors are exactly the same (AP=0.5)"* [6].
+What is added here is that the equality is *solved for* rather than drawn, on real data,
+with the error profiles known exactly. Reproduce with `mapstudy equivalence`.
 
-## 2. Completeness: the IoU threshold is a cliff, not a slope
+## 2. mAP measures localisation only as a threshold test
 
 ![Metrics as localisation degrades](docs/figures/sweep_shift.png)
 
-Every box is shifted diagonally by a growing fraction of its size, so the IoU of *every*
-prediction is known in closed form (`r²/(2-r²)` with `r = 1 - shift`) and falls from 1.0
-to 0.09.
+This is scenario A turned into a sweep. Instead of one shift of 20%, every box is
+shifted diagonally by a growing fraction of its size, so the IoU of *every* prediction is
+known in closed form (`r²/(2-r²)` with `r = 1 - shift`) and falls from 1.0 to 0.09.
 
 | IoU of every prediction | 0.68 | 0.57 | 0.52 | **0.47** | 0.43 |
 |---|---:|---:|---:|---:|---:|
@@ -128,27 +172,33 @@ to 0.09.
 Localisation quality drops by a third while mAP@0.50 moves by 0.006, then collapses to
 zero between two adjacent points. On either side of the threshold mAP@0.50 carries **no
 information at all** about localisation: it reports which side of 0.5 the boxes are on,
-and nothing else. mAP@[.50:.95] degrades in ten visible steps, one per threshold crossed
-- a staircase, not a curve.
+and nothing else. mAP@[.50:.95] degrades in ten visible steps, one per threshold crossed,
+which is a staircase rather than a curve.
 
 The shift that puts IoU exactly at 0.5 is `1 - sqrt(2/3) ≈ 0.1835`. A detector at
-`shift = 0.1834` scores ~1.0 and a detector at `shift = 0.1836` scores ~0.0, and no
-human looking at the two sets of boxes could tell them apart.
+`shift = 0.1834` scores about 1.0 and a detector at `shift = 0.1836` scores about 0.0,
+and no person looking at the two sets of boxes could tell them apart. Scenario A sits at
+`shift = 0.20`, just past the edge.
 
-## 3. Completeness: spatial hedging is free
+This is the second shortcoming Oksuz et al. list, the *"lack of directly measuring
+bounding box localization accuracy"* [6]. The oLRP column is included here only to show
+that the cliff is not inevitable; it is discussed in experiment 8.
+
+## 3. mAP ignores spatial hedging
 
 ![Metrics as redundant predictions pile up](docs/figures/sweep_hedges.png)
 
 **Spatial hedging** is the name Jena et al. give to a detector that covers its bets:
 *"Spatial Hedging refers to hedged predictions which are spatially perturbed versions of
-each other"* [10]. Rather than commit to one box per object, the detector surrounds each
+each other"* [3]. Rather than commit to one box per object, the detector surrounds each
 object with displaced variants at low confidence, so that whichever one turns out to be
 right, something was predicted there. The same paper states the consequence for the
-metric directly: *"Low-confidence FPs do not affect AP"* [10]. (Its companion notion,
-*category hedging*, predicts several categories for one object; it is not studied here.)
+metric directly: *"Low-confidence FPs do not affect AP"* [3]. Its companion notion,
+*category hedging*, predicts several categories for one object; it is not studied here.
 
-Here each object gets one accurate box at a high score plus a growing number of
-displaced boxes at low scores.
+Scenario B is one point of this sweep, at four hedging boxes per object. Here that
+number grows from 0 to 12, taking the detector from 3,552 to 46,176 detections for the
+same 3,552 objects.
 
 | Spurious boxes per object | 0 | 4 | 8 | 12 |
 |---|---:|---:|---:|---:|
@@ -158,10 +208,9 @@ displaced boxes at low scores.
 | F1 at score ≥ 0.05 | 1.000 | 0.333 | 0.207 | 0.159 |
 
 Not one ranking-based metric reacts, to three decimal places, while the detector emits
-thirteen times more boxes. The spurious boxes all rank below every accurate box, so they
-enter the precision-recall curve only after recall has reached 1 and the curve is never
-lowered. This confirms on COCO what Jena et al. report for instance segmentation: AP
-*"does not penalize duplicate predictions in the high-recall range"* [10].
+thirteen times more boxes. This confirms on COCO detection what Jena et al. report for
+instance segmentation: AP *"does not penalize duplicate predictions in the high-recall
+range"* [3].
 
 **This blindness is not specific to mAP.** oLRP is equally still, and so is TIDE, because
 all three evaluate a *ranking* and are free to choose where to cut it. Only a metric
@@ -190,7 +239,7 @@ Nothing moves until the two score populations overlap, then every ranking metric
 at once. **What these metrics measure is not whether a detector emits redundant boxes,
 but whether its confidence scores are well enough calibrated to separate them.**
 
-## 4. Completeness: duplication does not lower mAP below a floor
+## 4. mAP has a floor that duplication cannot cross
 
 ![mAP saturates under duplication](docs/figures/duplication.png)
 
@@ -206,7 +255,7 @@ drawn from **the same distribution as the accurate box**, so no threshold separa
 | **mAP@0.50** | 1.000 | 0.860 | 0.799 | 0.744 | **0.740** |
 | F1 at score ≥ 0.05 | 1.000 | 0.667 | 0.333 | 0.132 | **0.060** |
 
-**65 boxes per object - 230,880 detections for 3,552 objects, 97% of them wrong - and
+**65 boxes per object, 230,880 detections for 3,552 objects, 97% of them wrong, and
 mAP@0.50 still reports 0.740.** The curve flattens after the first few copies and stops
 falling.
 
@@ -220,11 +269,11 @@ duplication alone**, whatever the confidence of the duplicates.
 
 Reproduce with `mapstudy duplication`.
 
-## 5. Practicality: AP reads the ranking, never the scores
+## 5. mAP reads the ranking of scores, never their values
 
-A detector's confidence scores are replaced by strictly increasing functions of
-themselves. The boxes, the labels and the order of the detections are untouched; only the
-numbers change.
+The baseline detector's confidence scores are replaced by strictly increasing functions
+of themselves. The boxes, the labels and the order of the detections are untouched; only
+the numbers attached to them change.
 
 | Score transform | Resulting score range | mAP@0.50 | mAP@[.50:.95] | F1 at score ≥ 0.05 |
 |---|---|---:|---:|---:|
@@ -234,19 +283,19 @@ numbers change.
 | logistic | [0.008, 0.998] | 0.643157 | 0.177631 | 0.696 |
 | **`0.10 + 0.02·s`** | **[0.102, 0.120]** | **0.643157** | **0.177631** | 0.772 |
 
-The deviation across every row is **exactly 0.000000** - not approximately, identically,
-and the test suite asserts it. The last row is the one that matters: every detection now
-scores between 0.102 and 0.120, so the detector is unusable at any conventional
-threshold, and mAP has not moved by one unit in the last decimal place.
+The deviation across every row is **exactly 0.000000**, not approximately but
+identically, and the test suite asserts it. The last row is the one that matters: every
+detection now scores between 0.102 and 0.120, so the detector is unusable at any
+conventional threshold, and mAP has not moved by one unit in the last decimal place.
 
 This is the measured form of the property Oksuz et al. state directly: *"AP is not
 confidence-score sensitive. Since the sorted list of the detections is required to
 calculate AP, a detector generating results in a limited interval will lead to the same
-AP"* [5]. The last row is exactly that limited interval. The information required to
-choose a threshold is not merely hard to extract from mAP - it is provably absent,
+AP"* [6]. The last row is exactly that limited interval. The information required to
+choose a threshold is not merely hard to extract from mAP; it is provably absent,
 because mAP is invariant to every transformation that could change the answer.
 
-## 6. Practicality: interpolation raises AP by an uneven amount
+## 6. Interpolation raises AP by an unpredictable amount
 
 ![What interpolation adds](docs/figures/interpolation_bias.png)
 
@@ -254,7 +303,7 @@ Before integrating, COCO replaces each precision by the highest precision reache
 greater recall. This monotone envelope can only raise AP. The question is by how much,
 and whether that amount is a fixed offset.
 
-Measured per category, pooled over 8 seeds:
+Measured on the baseline detector, per category, pooled over 8 seeds:
 
 | Objects in the category | 1-2 | 3-5 | 6-10 | 11-25 | 26-50 | 51-100 | 101+ |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -269,20 +318,20 @@ deviation is four times larger for categories of 6-10 objects than for categorie
 alone. Since mAP weights every category equally, those swings pass straight into the
 leaderboard number.
 
-Two honest qualifications. The effect is *not* monotone in category size - below three
-objects the curve has too few steps to have dips worth filling, and the bias vanishes.
-And "AP without interpolation" is not a standard metric; it is shown to measure what the
-smoothing hides, not to propose an alternative.
+Two qualifications, stated because they bound the claim. The effect is *not* monotone in
+category size: below three objects the curve has too few steps to have dips worth
+filling, and the bias vanishes. And "AP without interpolation" is not a standard metric;
+it is computed here to measure what the smoothing hides, not to propose an alternative.
 
 ---
 
-# Part 2 - What oLRP and TIDE see instead
+# Part 2 - How far oLRP and TIDE are more relevant
 
 Every number in this part comes from the **same detections** as Part 1. The question is
 never whether a metric is higher or lower, but whether it separates what mAP merges, and
 whether what it reports is actionable.
 
-## 7. The decomposition is what does the work - not the score
+## 7. The decomposition does the work, not the score
 
 Return to the three detectors of experiment 1, all at mAP@0.50 = 0.500. Spread means
 `max - min` across the three: a metric that cannot tell them apart has a spread of zero.
@@ -301,10 +350,10 @@ Return to the three detectors of experiment 1, all at mAP@0.50 = 0.500. Spread m
 | TIDE verdict | `Miss` | `Bkg` | `Loc` | - |
 
 The `oLRP ↓` row deserves attention before the ones below it. **The oLRP score is itself
-a weak discriminator here: 0.066 of spread, against 0.0004 for mAP.** Better by two orders of
-magnitude, but still three detectors within 0.07 of each other - closer than the gap
-between consecutive entries on most leaderboards. Anyone comparing these three on the
-oLRP number alone would learn almost nothing.
+a weak discriminator here: 0.066 of spread, against 0.0004 for mAP.** Better by two
+orders of magnitude, but still three detectors within 0.07 of each other, which is
+closer than the gap between consecutive entries on most leaderboards. Anyone comparing
+these three on the oLRP number alone would learn almost nothing.
 
 What separates them is the **decomposition**: false positive and false negative spread by
 0.54 and 0.46, and TIDE names each detector's failure on the first try. The case for oLRP
@@ -317,7 +366,7 @@ little over mAP.
 
 ### Where oLRP stops and TIDE starts
 
-The `oLRP localisation` row is nearly flat at zero - including for the detector whose
+The `oLRP localisation` row is nearly flat at zero, including for the detector whose
 *only* error is mislocalisation. This is not a bug. oLRP's localisation term measures the
 tightness of boxes that already passed the IoU threshold; a box that *misses* the
 threshold is not a loose true positive, it is a false positive, and the object it failed
@@ -326,16 +375,16 @@ which is exactly what it reports for a detector that emits a spurious box and se
 misses an object. Two different failures produce the same reading.
 
 TIDE resolves it: `Loc = 0.495`, every other error type at zero. It can, because it asks
-a different question - how much AP would come back if this one error type were fixed -
-and fixing localisation recovers what fixing anything else would not.
+a different question, namely how much AP would come back if this one error type were
+fixed, and fixing localisation recovers what fixing anything else would not.
 
 **oLRP and TIDE are not two candidates for the same job.** oLRP splits the error into
 three commensurable components at a usable operating point; TIDE attributes lost AP to
 six named causes. The experiment above needs both, and neither alone is sufficient.
 
-## 8. oLRP reacts continuously where mAP falls off a cliff
+## 8. oLRP measures localisation where mAP only thresholds it
 
-From experiment 2, the same sweep, the full picture:
+Experiment 2's sweep, with the range beyond the threshold now included:
 
 | shift | 0.000 | 0.050 | 0.100 | 0.150 | 0.175 | **0.200** | 0.300 | 0.600 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -344,18 +393,16 @@ From experiment 2, the same sweep, the full picture:
 | oLRP ↓ | 0.000 | 0.355 | 0.639 | 0.869 | 0.968 | **0.999** | 0.998 | 0.999 |
 
 Over `shift ∈ [0, 0.175]`, localisation quality halves, mAP@0.50 moves by 0.006 and oLRP
-traverses 0.00 → 0.97 monotonically. This is the second shortcoming Oksuz et al. list,
-the *"lack of directly measuring bounding box localization accuracy"* [5], and the
-measurement supports their case: on this range oLRP is not marginally better than mAP, it
-is the difference between a metric that measures localisation and one that only reports
-which side of a threshold the boxes fall on.
+traverses 0.00 to 0.97 monotonically. The measurement supports the case Oksuz et al. make:
+on this range oLRP is not marginally better than mAP, it is the difference between a
+metric that measures localisation and one that only reports which side of a threshold the
+boxes fall on.
 
-**But look at the right half of the table.** Past the threshold, oLRP saturates at 0.999
-while the true IoU keeps falling from 0.471 to 0.087. oLRP is continuous *above* the IoU
-threshold and blind *below* it, because its localisation term is normalised by `1 - 0.5`
-and counts only matched true positives. Its advantage is real and it is bounded: oLRP
-grades a detector that is nearly good enough, and says nothing useful about one that is
-far off.
+**The right half of the table bounds that advantage.** Past the threshold, oLRP saturates
+at 0.999 while the true IoU keeps falling from 0.471 to 0.087. oLRP is continuous *above*
+the IoU threshold and blind *below* it, because its localisation term is normalised by
+`1 - 0.5` and counts only matched true positives. oLRP grades a detector that is nearly
+good enough, and says little about one that is far off.
 
 ### What TIDE adds: not how much was lost, but why
 
@@ -364,19 +411,18 @@ far off.
 At `shift = 0.20`, mAP reports 0.003 and stops. TIDE reports that **98.3% of the lost AP
 returns by fixing localisation alone**, every other error type at zero. That is the
 difference between a score and a diagnosis: it answers the question a score of 0.003
-leaves open, which is what to change.
+leaves open, which is what to change. On scenario A itself, evaluated over 1,000 images
+at mAP@0.50 = 0.001, TIDE attributes **0.986 of the 0.999 lost AP to `Loc`**.
 
-On scenario A of the reference table - every box shifted by 20%, mAP@0.50 = 0.001 -
-TIDE attributes **0.986 of the 0.999 lost AP to `Loc`**.
+The figure also shows a limit of TIDE, and it is the reason the summary table below does
+not credit TIDE with covering localisation everywhere. Below IoU = 0.1, its background
+threshold, a prediction stops being a mislocalised box and becomes a spurious one:
+attribution to `Loc` collapses from 0.90 to 0.05 and **nothing takes its place**. TIDE
+measures the AP recovered by fixing *one* error type at a time, and there the detector is
+wrong in two ways at once, so no single fix recovers anything. About 0.94 of lost AP is
+then attributed to nothing at all.
 
-The figure also shows a limit of TIDE. Below IoU = 0.1, its background threshold, a
-prediction stops being a mislocalised box and becomes a spurious one: attribution to
-`Loc` collapses from 0.90 to 0.05 and **nothing takes its place**. TIDE measures the AP
-recovered by fixing *one* error type at a time, and there the detector is wrong in two
-ways at once, so no single fix recovers anything. About 0.94 of lost AP is then
-attributed to nothing at all.
-
-## 9. oLRP sees the duplication that mAP floors on
+## 9. oLRP reacts to duplication where mAP reaches its floor
 
 Experiment 4, with oLRP added:
 
@@ -390,20 +436,20 @@ Experiment 4, with oLRP added:
 | F1 at score ≥ 0.05 | 1.000 | 0.667 | 0.333 | 0.132 | 0.060 |
 
 This is the clearest advantage oLRP shows as a scalar anywhere in the study. mAP degrades
-by 0.26 and stops; oLRP degrades by 0.56 and keeps moving. The reason oLRP works here and failed in
-experiment 3 is exact: in experiment 3 the redundant boxes scored below everything, so
+by 0.26 and stops; oLRP degrades by 0.56 and keeps moving. The reason oLRP works here and
+failed in experiment 3 is exact: there the redundant boxes scored below everything, so
 oLRP's minimisation over thresholds discarded them for free. Here they score as high as
 the accurate boxes, no threshold can discard them, and oLRP is forced to count them.
 
 **And τ\* carries the practical answer.** As duplication grows, the threshold minimising
-LRP climbs from 0.211 to 0.981: oLRP is saying *this detector is only usable if you keep
-detections above 0.98*. This is the output Oksuz et al. designed the metric to produce -
-*"Optimal LRP determines the 'best' confidence score threshold for a class, which
-balances the trade-off between localization and recall-precision"* [5] - and mAP has no
-equivalent. τ\* is reported by [`evaluate_lrp`](src/mapstudy/evaluation.py) and is the
+LRP climbs from 0.211 to 0.981: oLRP is reporting that this detector is only usable if
+detections below 0.98 are discarded. This is the output Oksuz et al. designed the metric
+to produce, *"Optimal LRP determines the 'best' confidence score threshold for a class,
+which balances the trade-off between localization and recall-precision"* [6], and mAP has
+no equivalent. τ\* is exposed by [`evaluate_lrp`](src/mapstudy/evaluation.py) and is the
 part of oLRP that leaderboards discard.
 
-## 10. oLRP is rank-invariant too - but τ\* is not
+## 10. oLRP is rank-invariant too, but τ\* is not
 
 Experiment 5, with oLRP added. This is the place where oLRP's advantage is smallest and
 it is stated plainly:
@@ -418,21 +464,24 @@ it is stated plainly:
 
 **The oLRP score is invariant too**, to four decimal places, for the same reason as mAP:
 it is a minimum over thresholds, and a monotone remapping moves the thresholds with the
-scores. Any claim that oLRP "takes confidence into account" where mAP does not is false
-as stated, and this table is the refutation.
+scores. Any claim that oLRP takes confidence values into account where mAP does not is
+false as stated, and this table is the counterexample.
 
 What survives is narrower and true: oLRP *reports* τ\*, and τ\* tracks the actual score
 values, moving from 0.074 to 0.507 across the rows. The score is rank-invariant; the
 recommendation attached to it is not. mAP emits no such recommendation at all.
 
-## 11. The three criteria, settled
+## 11. The three criteria, reviewed
+
+Each cell names the experiment it rests on, so that no claim in this table is made
+outside the evidence above.
 
 | | | mAP | oLRP | TIDE |
 |---|---|---|---|---|
-| **Completeness** | Localisation | Binary at the IoU threshold: a cliff (exp. 2) | Continuous above the threshold, saturated below (exp. 8) | Attributes lost AP to `Loc` on both sides (exp. 8) |
-| | FP vs FN | Merged into one curve; indistinguishable (exp. 1) | Separated: spreads 0.54 and 0.46 (exp. 7) | Separated, and by *kind* of FP: `Bkg`, `Dupe`, `Cls` (exp. 7) |
-| | Redundant boxes | Floor at 0.740 under 65× duplication (exp. 4) | Reacts: 0.000 → 0.555 (exp. 9) | `Dupe` rises to 0.24 (exp. 9) |
-| | Low-score hedging | Blind (exp. 3) | **Equally blind** (exp. 3) | **Equally blind** (exp. 3) |
+| **Completeness** | Localisation | Binary at the IoU threshold (exp. 2) | Continuous above the threshold, saturated below (exp. 8) | Attributes lost AP to `Loc` above IoU 0.1, nothing below it (exp. 8) |
+| | FP vs FN | Merged into one curve, indistinguishable (exp. 1) | Separated: spreads 0.54 and 0.46 (exp. 7) | Separated, and by *kind* of FP: `Bkg`, `Dupe`, `Cls` (exp. 7) |
+| | Redundant boxes, high confidence | Floor at 0.740 under 65x duplication (exp. 4) | Reacts: 0.000 to 0.555 (exp. 9) | `Dupe` rises to 0.24 (exp. 9) |
+| | Spatial hedging, low confidence | Blind (exp. 3) | **Equally blind** (exp. 3) | **Equally blind** (exp. 3) |
 | **Interpretability** | Given the score, what do you fix? | Nothing: three detectors, one score (exp. 1) | Which of three error terms dominates (exp. 7) | Which of six named causes, ranked by AP recoverable (exp. 7) |
 | | As a single number | - | Nearly as uninformative as mAP: spread 0.066 (exp. 7) | Not a single number by construction |
 | **Practicality** | Choosing a threshold | Provably impossible: invariant (exp. 5) | Score invariant too, but reports τ\* (exp. 10) | - |
@@ -445,41 +494,37 @@ Two claims are supported by the experiments above, and a third is not.
 **Supported.** mAP is not injective: detectors with opposite failures, opposite precision
 and opposite recall reach the same score, and no amount of averaging over IoU thresholds
 changes that. And mAP is invariant to every monotone transformation of confidence, so it
-provably cannot inform the one decision every deployment requires. What both results have
-in common is that mAP is a single number without an account of itself. It ranks
-detectors; it does not explain them. A team whose mAP is low learns from it that
-something is wrong and nothing about where, and a team whose mAP is high, as experiments
-3 and 4 show, may be learning nothing at all.
+cannot inform the one decision every deployment requires. What both results have in
+common is that mAP is a single number without an account of itself. It ranks detectors;
+it does not explain them. A team whose mAP is low learns from it that something is wrong
+and nothing about where, and a team whose mAP is high, as the opening pair and
+experiments 3 and 4 show, may be learning nothing at all.
 
 **Supported.** oLRP's three components and TIDE's six error types recover what mAP merges,
 on the same detections, and τ\* answers a question mAP cannot express. This is the
-"richer and more discriminative information than AP" that Oksuz et al. claim for oLRP
-[5], and the equivalence experiment is a direct measurement of it. Reporting oLRP
-alongside TIDE is a strict improvement over reporting mAP.
+*"richer and more discriminative information than AP"* that Oksuz et al. claim for oLRP
+[6], and experiment 1 together with experiment 7 is a direct measurement of it. Reporting
+oLRP alongside TIDE is a strict improvement over reporting mAP.
 
 **Not supported, and asserted here only in this restricted form.** "oLRP is a better
-number than mAP" is not borne out by these measurements. As a scalar, oLRP separates the three
-calibrated detectors by 0.066, is blind to low-score hedging exactly as mAP is, is
+number than mAP" is not borne out by these measurements. As a scalar, oLRP separates the
+three calibrated detectors by 0.066, is blind to low-score hedging exactly as mAP is, is
 invariant to score remapping exactly as mAP is, and saturates below the IoU threshold.
 What is better is not the number but the **decomposition**, and it is better because it
 is more than one number.
 
 The practical recommendation follows from the failures shared by all three: report
 oLRP's components with τ\* and a TIDE breakdown, and add one metric at a fixed operating
-point - the F1 column is the only one in this study that reacted to every failure mode
+point. The F1 column is the only one in this study that reacted to every failure mode
 tested.
 
 ---
 
 # Reference results
 
-The two original scenarios, on the first 1,000 annotated images of COCO 2017 train
-(7,538 objects), seed 42. Reproduce with `mapstudy run --all`.
-
-| Scenario A: sub-threshold localisation | Scenario B: spatial hedging |
-|---|---|
-| ![Scenario A](docs/figures/scenario_a.jpg) | ![Scenario B](docs/figures/scenario_b.jpg) |
-| Every box shifted by 20% of its size. IoU is **exactly 0.471** for every object, whatever its size. Scores in U(0.85, 0.99). | One accurate box per object (IoU ≈ 0.82, score in U(0.85, 0.95)) plus four boxes displaced by 30-70% and rescaled by 0.8-1.2 (IoU ≤ 0.497 by construction, score in U(0.10, 0.40)). |
+The three detectors of the Method table, evaluated with every metric on the first 1,000
+annotated images of COCO 2017 train (7,538 objects), seed 42. These are the numbers the
+opening pair is taken from. Reproduce with `mapstudy run --all`.
 
 | Metric | Baseline | Scenario A | Scenario B |
 | --- | ---: | ---: | ---: |
@@ -496,19 +541,21 @@ The two original scenarios, on the first 1,000 annotated images of COCO 2017 tra
 | TIDE dominant error | Loc | Loc | none |
 | Detections / objects | 7538 / 7538 | 7538 / 7538 | 37690 / 7538 |
 
-**Scenario A: mAP reports near-total failure.** Every box visibly covers its object, yet
-mAP is essentially zero. The few true positives are predictions that happen to overlap
-*another* object of the same class by more than 0.5. TIDE says why: fixing localisation
-recovers 98.6 of the 99.9 AP points lost.
+Three readings worth making explicit.
 
-**Scenario B: a perfect score for a bad detector.** All four spurious boxes rank below
-every accurate box, so the precision-recall curve is never lowered. Interpolation plays
-no role: the uninterpolated AP is also 1.000. TIDE finds **no error to fix**, because it
-measures AP recoverable and there is none to recover. oLRP reports 0.355, but only from
-the residual localisation error of the accurate boxes - its false-positive term is
-**0.000**, so it does not see the spurious boxes either. mAP@[.50:.95] = 0.700 is not a
-coincidence: with IoU ≈ 0.82 the accurate boxes are true positives at 7 of the 10
-thresholds.
+**The from-scratch mAP agrees with `pycocotools` to three decimals** on all three
+detectors, and the test suite checks the agreement to 1e-9. The failures shown in this
+README are properties of the metric, not of an implementation.
+
+**Scenario B's mAP@[.50:.95] = 0.700 is not a coincidence.** The accurate boxes sit at
+IoU around 0.82, so they are true positives at the 7 thresholds from 0.50 to 0.80 and
+false positives at the 3 above. Seven tenths.
+
+**Neither oLRP nor TIDE sees scenario B's hedging.** oLRP reports 0.355, but its
+false-positive term is **0.000**: the 0.355 comes entirely from the residual
+localisation error of the accurate boxes. TIDE finds no error to fix at all, because it
+measures AP recoverable and there is none to recover. This is the limitation stated in
+experiment 3, visible on the scenario that motivated the study.
 
 # Metrics
 
@@ -538,17 +585,18 @@ Parquet export on the Hugging Face Hub. Only the shards that are needed are down
 and cached: the first one (about 475 MB) covers roughly 3,000 images.
 
 ```bash
-mapstudy run --all                # every scenario, 1,000 images, writes results/
-
-# Part 1 - the blind spots
-mapstudy equivalence              # exp. 1 and 7: three detectors, one mAP
-mapstudy sweep shift              # exp. 2 and 8: the IoU cliff, plus the TIDE breakdown
-mapstudy sweep hedges             # exp. 3: redundant boxes at low confidence
-mapstudy sweep hedge-score        # exp. 3: when hedging becomes visible
-mapstudy duplication              # exp. 4 and 9: the floor duplication cannot break
-mapstudy invariance               # exp. 5 and 6: score invariance, interpolation bias
-
+# the opening pair and the reference table
+mapstudy run --all                # baseline, scenario A, scenario B; writes results/
 mapstudy visualize --scenario b --image-index 5
+
+# Part 1, the case against mAP
+mapstudy equivalence              # exp. 1 and 7: three detectors, one mAP
+mapstudy sweep shift              # exp. 2 and 8: scenario A swept, plus the TIDE breakdown
+mapstudy sweep hedges             # exp. 3: scenario B swept
+mapstudy sweep hedge-score        # exp. 3: when hedging becomes visible
+mapstudy duplication              # exp. 4 and 9: the floor duplication cannot cross
+mapstudy invariance               # exp. 5, 6 and 10: score invariance, interpolation bias
+
 pytest                            # offline, no dataset download
 ```
 
@@ -588,22 +636,22 @@ docs/figures/              Figures used in this README
 - The operating point is reported at a single, arbitrary score threshold (0.05). A full
   precision-recall-versus-threshold analysis would be more informative.
 - mAP, oLRP and TIDE all rely on the same one-to-one matching between predictions and
-  ground truths. In crowded scenes the matching itself can dominate the result, as the
-  few true positives of scenario A show.
+  ground truths. In crowded scenes the matching itself can dominate the result, which is
+  what produces scenario A's handful of true positives.
 - Everything is evaluated at bounding-box level only.
 
 # References
 
 1. Bolya, D., Foley, S., Hays, J., & Hoffman, J. (2020). [TIDE: A General Toolbox for Identifying Object Detection Errors](https://dbolya.github.io/tide/). ECCV.
 2. Everingham, M., Van Gool, L., Williams, C. K. I., Winn, J., & Zisserman, A. (2010). The Pascal Visual Object Classes (VOC) Challenge. *IJCV*, 88(2), 303-338.
-3. Kirillov, A., He, K., Girshick, R., Rother, C., & Dollár, P. (2019). Panoptic Segmentation. CVPR.
-4. Lin, T.-Y., Maire, M., Belongie, S., Hays, J., Perona, P., Ramanan, D., Dollár, P., & Zitnick, C. L. (2014). [Microsoft COCO: Common Objects in Context](https://arxiv.org/abs/1405.0312). ECCV.
-5. Oksuz, K., Cam, B. C., Akbas, E., & Kalkan, S. (2018). [Localization Recall Precision (LRP): A New Performance Metric for Object Detection](https://arxiv.org/abs/1807.01696). ECCV.
-6. Oksuz, K., Cam, B. C., Kalkan, S., & Akbas, E. (2021). Imbalance Problems in Object Detection: A Review. *IEEE TPAMI*, 43(10), 3388-3415.
-7. Padilla, R., Passos, W. L., Dias, T. L. B., Netto, S. L., & da Silva, E. A. B. (2021). A Comparative Analysis of Object Detection Metrics with a Companion Open-Source Toolkit. *Electronics*, 10(3), 279.
-8. Rezatofighi, H., Tsoi, N., Gwak, J., Sadeghian, A., Reid, I., & Savarese, S. (2019). [Generalized Intersection over Union](https://arxiv.org/abs/1902.09630). CVPR.
-9. Wolf, T., et al. (2020). Transformers: State-of-the-Art Natural Language Processing. EMNLP System Demonstrations.
-10. Jena, R., Zhornyak, L., Doiphode, N., Chaudhari, P., Buch, V., Gee, J., & Shi, J. (2023). [Beyond mAP: Towards Better Evaluation of Instance Segmentation](https://arxiv.org/abs/2207.01614). CVPR.
+3. Jena, R., Zhornyak, L., Doiphode, N., Chaudhari, P., Buch, V., Gee, J., & Shi, J. (2023). [Beyond mAP: Towards Better Evaluation of Instance Segmentation](https://arxiv.org/abs/2207.01614). CVPR.
+4. Kirillov, A., He, K., Girshick, R., Rother, C., & Dollár, P. (2019). Panoptic Segmentation. CVPR.
+5. Lin, T.-Y., Maire, M., Belongie, S., Hays, J., Perona, P., Ramanan, D., Dollár, P., & Zitnick, C. L. (2014). [Microsoft COCO: Common Objects in Context](https://arxiv.org/abs/1405.0312). ECCV.
+6. Oksuz, K., Cam, B. C., Akbas, E., & Kalkan, S. (2018). [Localization Recall Precision (LRP): A New Performance Metric for Object Detection](https://arxiv.org/abs/1807.01696). ECCV.
+7. Oksuz, K., Cam, B. C., Kalkan, S., & Akbas, E. (2021). Imbalance Problems in Object Detection: A Review. *IEEE TPAMI*, 43(10), 3388-3415.
+8. Padilla, R., Passos, W. L., Dias, T. L. B., Netto, S. L., & da Silva, E. A. B. (2021). A Comparative Analysis of Object Detection Metrics with a Companion Open-Source Toolkit. *Electronics*, 10(3), 279.
+9. Rezatofighi, H., Tsoi, N., Gwak, J., Sadeghian, A., Reid, I., & Savarese, S. (2019). [Generalized Intersection over Union](https://arxiv.org/abs/1902.09630). CVPR.
+10. Wolf, T., et al. (2020). Transformers: State-of-the-Art Natural Language Processing. EMNLP System Demonstrations.
 
 # Authors
 
