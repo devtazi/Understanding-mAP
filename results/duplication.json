@@ -1,0 +1,111 @@
+{
+  "n_images": 500,
+  "n_objects": 3552,
+  "seed": 42,
+  "points": [
+    {
+      "duplicates_per_object": 0,
+      "n_detections": 3552,
+      "map50": 1.0,
+      "map": 1.0,
+      "olrp": 0.0,
+      "olrp_false_positive": 0.0,
+      "olrp_optimal_threshold": 0.21104890788923067,
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "tide_dupe": 0.0
+    },
+    {
+      "duplicates_per_object": 1,
+      "n_detections": 7104,
+      "map50": 0.8603008221273034,
+      "map": 0.8208169462484285,
+      "olrp": 0.37903990905122453,
+      "olrp_false_positive": 0.24524000343922572,
+      "olrp_optimal_threshold": 0.4711924953681466,
+      "precision": 0.5,
+      "recall": 1.0,
+      "f1": 0.6666666666666666,
+      "tide_dupe": 0.13566156194141699
+    },
+    {
+      "duplicates_per_object": 2,
+      "n_detections": 10656,
+      "map50": 0.8237353177277765,
+      "map": 0.7656458112953711,
+      "olrp": 0.4433832823836525,
+      "olrp_false_positive": 0.271625606917014,
+      "olrp_optimal_threshold": 0.6255027953636672,
+      "precision": 0.3333333333333333,
+      "recall": 1.0,
+      "f1": 0.5,
+      "tide_dupe": 0.16901133391178774
+    },
+    {
+      "duplicates_per_object": 4,
+      "n_detections": 17760,
+      "map50": 0.7993487135822042,
+      "map": 0.7245676669706579,
+      "olrp": 0.476046039919534,
+      "olrp_false_positive": 0.2850249221350787,
+      "olrp_optimal_threshold": 0.7625937135152866,
+      "precision": 0.2,
+      "recall": 1.0,
+      "f1": 0.33333333333333337,
+      "tide_dupe": 0.18948890623846765
+    },
+    {
+      "duplicates_per_object": 8,
+      "n_detections": 31968,
+      "map50": 0.7657312142436933,
+      "map": 0.6843895324947484,
+      "olrp": 0.5208433388760801,
+      "olrp_false_positive": 0.30210459310788623,
+      "olrp_optimal_threshold": 0.8643481584823793,
+      "precision": 0.11526105720868352,
+      "recall": 1.0,
+      "f1": 0.20669789636009195,
+      "tide_dupe": 0.21986286514703934
+    },
+    {
+      "duplicates_per_object": 16,
+      "n_detections": 60384,
+      "map50": 0.743759516898196,
+      "map": 0.6602814676652953,
+      "olrp": 0.5459857557291193,
+      "olrp_false_positive": 0.30489932211179277,
+      "olrp_optimal_threshold": 0.9249225034425463,
+      "precision": 0.07075697211155378,
+      "recall": 1.0,
+      "f1": 0.1321625241851466,
+      "tide_dupe": 0.2397863599516576
+    },
+    {
+      "duplicates_per_object": 32,
+      "n_detections": 117216,
+      "map50": 0.7334170472342891,
+      "map": 0.645628604882722,
+      "olrp": 0.559346263355617,
+      "olrp_false_positive": 0.31346208300358175,
+      "olrp_optimal_threshold": 0.9601892398469533,
+      "precision": 0.044751297686841704,
+      "recall": 1.0,
+      "f1": 0.08566880517099995,
+      "tide_dupe": 0.24632385763277426
+    },
+    {
+      "duplicates_per_object": 64,
+      "n_detections": 230880,
+      "map50": 0.7404832555819866,
+      "map": 0.6496071065227238,
+      "olrp": 0.5549784789708241,
+      "olrp_false_positive": 0.3007161780705764,
+      "olrp_optimal_threshold": 0.9806136522138916,
+      "precision": 0.03075923599982676,
+      "recall": 0.9997184684684685,
+      "f1": 0.05968217686160156,
+      "tide_dupe": 0.23861730436786588
+    }
+  ]
+}

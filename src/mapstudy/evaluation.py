@@ -21,6 +21,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import cv2
+import numpy as np
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
 from tidecv import TIDE
@@ -52,12 +53,20 @@ class CustomMetrics:
 
 @dataclass(frozen=True)
 class LrpMetrics:
-    """Optimal LRP at IoU 0.5. Lower is better. ``None`` when undefined (no true positive)."""
+    """Optimal LRP at IoU 0.5. Lower is better. ``None`` when undefined (no true positive).
+
+    ``optimal_threshold`` is the confidence threshold tau* at which the minimum is
+    attained. oLRP is a *minimum over thresholds*, so the score alone hides where that
+    minimum sits; tau* is the part of the metric that says which detections it kept.
+    Reporting it is what lets oLRP answer a question mAP cannot: at what confidence
+    should this detector be deployed.
+    """
 
     olrp: float | None
     localisation: float | None
     false_positive: float | None
     false_negative: float | None
+    optimal_threshold: float | None = None
 
 
 @dataclass(frozen=True)
@@ -145,7 +154,21 @@ def evaluate_lrp(images: Sequence[ImageRecord], detections: Sequence[Detection])
         evaluator.summarize()
     # The evaluator reports -1 for an undefined metric, e.g. localisation error without TP.
     olrp, loc, fp, fn = (None if v < 0 or math.isnan(v) else float(v) for v in evaluator.stats[12:16])
-    return LrpMetrics(olrp, loc, fp, fn)
+    return LrpMetrics(olrp, loc, fp, fn, _optimal_threshold(evaluator))
+
+
+def _optimal_threshold(evaluator: LRPCOCOeval) -> float | None:
+    """Mean over categories of tau*, the confidence threshold minimising LRP.
+
+    ``accumulate`` stores one threshold per category in ``eval['lrp_opt_thr']``. The
+    array is initialised to -1 and set to NaN for a category with no true positive, so
+    both sentinels are skipped and only real thresholds are averaged.
+    """
+    thresholds = evaluator.eval.get("lrp_opt_thr")
+    if thresholds is None:
+        return None
+    defined = thresholds[np.isfinite(thresholds) & (thresholds >= 0)]
+    return float(defined.mean()) if defined.size else None
 
 
 def evaluate_tide(

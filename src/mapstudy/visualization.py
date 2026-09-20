@@ -240,3 +240,214 @@ def plot_tide_breakdown(
         output.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(output, dpi=130, bbox_inches="tight")
     return fig
+
+
+#: Detector label and colour. The colours echo the TIDE palette of the error each
+#: detector commits, so a bar and the TIDE group it belongs to read as the same thing.
+EQUIVALENCE_DETECTORS = {
+    "miss": ("Missed objects", "#0ea5e9"),
+    "ghost": ("Spurious boxes", "#f97316"),
+    "mislocalised": ("Mislocalised boxes", "#eab308"),
+}
+
+#: Grouped bars of the equivalence figure: what each metric reports about detectors
+#: that mAP scores identically. ``None`` reads the value off ``tide_errors``.
+EQUIVALENCE_PANELS: tuple[tuple[str, str, str], ...] = (
+    ("mAP@0.50", "map50", "#2563eb"),
+    ("oLRP\nfalse positive", "olrp_false_positive", "#ef4444"),
+    ("oLRP\nfalse negative", "olrp_false_negative", "#64748b"),
+    ("TIDE\nLoc", "Loc", "#eab308"),
+    ("TIDE\nBkg", "Bkg", "#f97316"),
+    ("TIDE\nMiss", "Miss", "#0ea5e9"),
+)
+
+
+def plot_equivalence(
+    members,
+    *,
+    target_map: float,
+    title: str,
+    subtitle: str = "",
+    output: Path | None = None,
+) -> Figure:
+    """One bar group per metric, one bar per detector, on detectors sharing a mAP.
+
+    The leftmost group is flat by construction: that is the calibration. Every group to
+    its right is the same three detectors seen by a metric that does distinguish them,
+    so the figure is read by comparing the flatness of the first group with the rest.
+    """
+    import numpy as np
+
+    fig, ax = plt.subplots(figsize=(10, 5.2))
+    positions = np.arange(len(EQUIVALENCE_PANELS))
+    width = 0.8 / len(members)
+
+    for index, member in enumerate(members):
+        values = []
+        for _, key, _ in EQUIVALENCE_PANELS:
+            raw = getattr(member, key, None)
+            values.append(raw if raw is not None else member.tide_errors.get(key, 0.0))
+        label, color = EQUIVALENCE_DETECTORS.get(member.scenario, (member.scenario, "#94a3b8"))
+        offset = (index - (len(members) - 1) / 2) * width
+        bars = ax.bar(
+            positions + offset,
+            values,
+            width=width * 0.92,
+            label=label,
+            color=color,
+            edgecolor="white",
+            linewidth=0.6,
+        )
+        ax.bar_label(bars, fmt="%.2f", fontsize=7, padding=2)
+
+    # The dotted line is the calibration itself: the first group sits on it exactly.
+    ax.axhline(target_map, color="#2563eb", linestyle=":", linewidth=1.3)
+    ax.annotate(
+        f"calibrated to mAP@0.50 = {target_map:.2f}",
+        xy=(positions[0], target_map),
+        xytext=(0, 9),
+        textcoords="offset points",
+        ha="center",
+        fontsize=8.5,
+        color="#2563eb",
+    )
+
+    # A divider between what mAP sees and what the decomposed metrics see.
+    ax.axvline(0.5, color="#cbd5e1", linewidth=1.2)
+    ax.annotate(
+        "what the leaderboard reports",
+        xy=(0, 1.04),
+        ha="center",
+        fontsize=8.5,
+        color="#64748b",
+        style="italic",
+    )
+    ax.annotate(
+        "the same detections, decomposed",
+        xy=((len(EQUIVALENCE_PANELS) + 0.5) / 2, 1.04),
+        ha="center",
+        fontsize=8.5,
+        color="#64748b",
+        style="italic",
+    )
+
+    ax.set_xticks(positions)
+    ax.set_xticklabels([label for label, _, _ in EQUIVALENCE_PANELS], fontsize=8.5)
+    ax.set(ylabel="Metric value", ylim=(0, 1.12))
+    ax.set_title(subtitle, fontsize=9.5, color="#475569")
+    fig.suptitle(title, fontsize=13, y=0.97)
+    ax.grid(alpha=0.25, axis="y")
+    # Below the axes: the top of the figure carries the two region labels instead.
+    ax.legend(
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.09),
+        ncol=len(members),
+        fontsize=9,
+        frameon=False,
+        title="Detector",
+        title_fontsize=9,
+    )
+
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output, dpi=130, bbox_inches="tight")
+    return fig
+
+
+def plot_duplication(points, *, title: str, subtitle: str = "", output: Path | None = None) -> Figure:
+    """Metrics against the number of near-identical boxes per object, on a log-ish axis.
+
+    The x axis is the duplication rate and starts at 0, so it is drawn on a symlog scale
+    rather than a log one. mAP flattening while F1 collapses is the whole content of the
+    figure.
+    """
+    x = [p.duplicates_per_object for p in points]
+    series = {
+        "map50": [p.map50 for p in points],
+        "map": [p.map for p in points],
+        "lrp_quality": [1 - p.olrp if p.olrp is not None else 0.0 for p in points],
+        "f1": [p.f1 for p in points],
+    }
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    for key, values in series.items():
+        label, color, linestyle = METRIC_STYLES[key]
+        ax.plot(
+            x, values, label=label, color=color, linestyle=linestyle, linewidth=2, marker="o", markersize=4
+        )
+
+    ax.set_xscale("symlog", linthresh=1)
+    ax.set_xticks(x)
+    ax.set_xticklabels([str(v) for v in x])
+    ax.set(
+        xlabel="Near-identical boxes added per object",
+        ylabel="Metric value (higher is better)",
+        ylim=(-0.02, 1.05),
+    )
+    ax.set_title(subtitle, fontsize=9.5, color="#475569")
+    fig.suptitle(title, fontsize=13, y=0.97)
+    ax.grid(alpha=0.25)
+    ax.legend(loc="best", fontsize=9, framealpha=0.9)
+
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output, dpi=130, bbox_inches="tight")
+    return fig
+
+
+def plot_interpolation_bias(points, *, title: str, subtitle: str = "", output: Path | None = None) -> Figure:
+    """Mean and spread of the envelope's contribution to AP, by category size.
+
+    The error bars carry the argument: the mean is nearly flat across sizes while the
+    spread widens sharply as categories get smaller, so what shrinks with the amount of
+    evidence is not the size of the correction but its predictability.
+    """
+    import numpy as np
+
+    labels = [
+        f"{p.min_objects}–{p.max_objects}" if p.max_objects < 10**6 else f"{p.min_objects}+"
+        for p in points
+    ]
+    means = np.array([p.bias_mean for p in points])
+    stds = np.array([p.bias_std for p in points])
+    maxima = [p.bias_max for p in points]
+    positions = np.arange(len(points))
+
+    # The quantity is non-negative by construction and its distribution is right-skewed,
+    # so the lower whisker is clipped at zero rather than drawn into impossible values.
+    errors = np.vstack([np.minimum(stds, means), stds])
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.bar(
+        positions,
+        means,
+        yerr=errors,
+        capsize=4,
+        color="#7c3aed",
+        alpha=0.85,
+        edgecolor="white",
+        label="mean ± 1 s.d. (clipped at 0)",
+    )
+    ax.plot(
+        positions,
+        maxima,
+        linestyle="none",
+        marker="_",
+        markersize=18,
+        color="#ef4444",
+        markeredgewidth=2,
+        label="worst category",
+    )
+
+    ax.set_xticks(positions)
+    ax.set_xticklabels(labels, fontsize=9)
+    ax.set(xlabel="Objects in the category", ylabel="AP@0.50 added by interpolation")
+    ax.set_title(subtitle, fontsize=9.5, color="#475569")
+    fig.suptitle(title, fontsize=13, y=0.97)
+    ax.grid(alpha=0.25, axis="y")
+    ax.legend(loc="best", fontsize=9, framealpha=0.9)
+
+    if output is not None:
+        output.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output, dpi=130, bbox_inches="tight")
+    return fig

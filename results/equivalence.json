@@ -1,0 +1,96 @@
+{
+  "n_images": 500,
+  "n_objects": 3552,
+  "seed": 42,
+  "target_map": 0.5,
+  "members": [
+    {
+      "scenario": "miss",
+      "parameter": "detect_rate",
+      "value": 0.4990234375,
+      "n_detections": 1837,
+      "map50": 0.4998730642294999,
+      "map": 0.4998730642294999,
+      "olrp": 0.5012962281554595,
+      "olrp_localisation": 0.0,
+      "olrp_false_positive": 0.0,
+      "olrp_false_negative": 0.5012962281554595,
+      "olrp_optimal_threshold": 0.2574806707710286,
+      "precision": 1.0,
+      "recall": 0.5171734234234234,
+      "f1": 0.6817591389868249,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.0,
+        "Both": 0.0,
+        "Dupe": 0.0,
+        "Bkg": 0.0,
+        "Miss": 0.5
+      },
+      "tide_dominant_error": "Miss"
+    },
+    {
+      "scenario": "ghost",
+      "parameter": "ghost_rate",
+      "value": 1.40234375,
+      "n_detections": 8533,
+      "map50": 0.49985213467464773,
+      "map": 0.49980260241799734,
+      "olrp": 0.5577307565384878,
+      "olrp_localisation": 3.270670900989896e-05,
+      "olrp_false_positive": 0.5404108879240095,
+      "olrp_false_negative": 0.04249790108770768,
+      "olrp_optimal_threshold": 0.3480184367774847,
+      "precision": 0.4162662604007969,
+      "recall": 1.0,
+      "f1": 0.5878361605295821,
+      "tide_errors": {
+        "Cls": 7.244299685098099e-05,
+        "Loc": 0.004187679875846655,
+        "Both": 0.005717394016820095,
+        "Dupe": 1.2074698871558098e-05,
+        "Bkg": 0.4700982899866466,
+        "Miss": 0.0017261898051977908
+      },
+      "tide_dominant_error": "Bkg"
+    },
+    {
+      "scenario": "mislocalised",
+      "parameter": "error_rate",
+      "value": 0.345703125,
+      "n_detections": 3552,
+      "map50": 0.5002829436105641,
+      "map": 0.49722774922326257,
+      "olrp": 0.4920775693420349,
+      "olrp_localisation": 0.0020688477594080976,
+      "olrp_false_positive": 0.31969645083810294,
+      "olrp_false_negative": 0.3481934779274452,
+      "olrp_optimal_threshold": 0.26823291521641085,
+      "precision": 0.6458333333333334,
+      "recall": 0.6458333333333334,
+      "f1": 0.6458333333333334,
+      "tide_errors": {
+        "Cls": 0.0,
+        "Loc": 0.49457263114160915,
+        "Both": 0.0,
+        "Dupe": 0.00023347538266598632,
+        "Bkg": 0.0,
+        "Miss": 0.00181635992694396
+      },
+      "tide_dominant_error": "Loc"
+    }
+  ],
+  "discrimination": {
+    "mAP@0.50": 0.0004308089359164047,
+    "mAP@[.50:.95]": 0.0026453150062373254,
+    "oLRP": 0.06565318719645291,
+    "oLRP localisation": 0.0020688477594080976,
+    "oLRP false positive": 0.5404108879240095,
+    "oLRP false negative": 0.4587983270677518,
+    "TIDE Loc": 0.49457263114160915,
+    "TIDE Bkg": 0.4700982899866466,
+    "TIDE Dupe": 0.00023347538266598632,
+    "TIDE Miss": 0.4982738101948022,
+    "F1 at fixed threshold": 0.09392297845724284
+  }
+}
