@@ -22,7 +22,7 @@ detector predicted, and both come with the mAP that detector obtained over 1,000
 
 | ![Scenario B](docs/figures/scenario_b.jpg) | ![Scenario A](docs/figures/scenario_a.jpg) |
 |:---:|:---:|
-| **Scenario B.** Five boxes per object, four of them nowhere near it. | **Scenario A.** One box per object, each visibly covering it. |
+| **Scenario B.** Five boxes per object, four of them nowhere near it. | **Scenario A.** One box per object, each covering it fairly well. |
 | **mAP@0.50 = 1.000** | **mAP@0.50 = 0.001** |
 | The highest score the metric can award. | Indistinguishable from a detector that found nothing. |
 
@@ -38,7 +38,6 @@ Average Precision ranks all detections by confidence and integrates precision ag
 recall. The four spurious boxes rank below every accurate box, so they only enter the
 curve once recall has already reached 1 and there is no precision left to lose. They
 cost nothing.
-Note that this is not an artefact of interpolation: the uninterpolated AP is also 1.000.
 
 **Why scenario A scores 0.001.** Every box keeps its object's size and is shifted by 20%
 of its width and height, which puts the IoU at exactly 0.471 for every object regardless
@@ -51,15 +50,28 @@ Neither failure is a bug in the implementation: both are reproduced here against
 `pycocotools` itself, and this project's from-scratch mAP agrees with it to 1e-9. They
 are properties of the metric's definition.
 
-These two scenarios are the starting point of the study, not its conclusion. Each is one
-point on a curve, and Part 1 turns each into a controlled sweep: experiment 2 varies the
-shift of scenario A continuously, experiment 3 varies the number of low-confidence boxes
-scenario B adds. Experiment 1 then shows the more general problem behind both.
+These two scenarios are the starting point of the study. Each is a single configuration 
+chosen by hand: one shift value for A, one number of extra boxes for B. 
+
+Now, to move from the intuition provided by these experiments to the actual proof, Part 1 
+will consist of : 
+
+- **Experiment 1** states the problem the two cenarios share. It is not that these particular
+  detectors are extreme, but that mAP gives the same score to detectors behaving in completely
+  different ways, so no score can be read back to the behaviour that produced it.
+- **Experiments 2 and 3** remove the hand-picking. Rather than one value each, they vary
+  the parameter across its whole range and report mAP at every step: the shift of
+  scenario A in experiment 2, the number of low-confidence boxes of scenario B in
+  experiment 3. What the two pictures above show at one setting turns out to hold across
+  the range. 
+
+This code accompanies the paper *"On the Relevance of Mean Average Precision in Object
+Detection: A Controlled Experimental Study and Comparative Analysis of Alternative
+Metrics"* (Tazi & Glissa, IMT Mines Alès & L2TI, Université Sorbonne Paris Nord, 2025).
 
 ## How a metric is judged here
 
-Three criteria organise the critique. They are the framework of the accompanying paper
-and of the oral presentation it is drawn from; the individual shortcomings they group
+Three criteria organise the critique. The individual shortcomings they group
 together are those enumerated for AP by Oksuz et al. [6] and, for redundant predictions,
 by Jena et al. [3].
 
@@ -100,8 +112,7 @@ experiment 1:
 
 Unless stated otherwise, results use the first 500 annotated images of COCO 2017 train
 (3,552 objects) with seed 42. The reference table at the end of this README uses the
-first 1,000 images (7,538 objects), as do the two figures above; where a number differs
-between the two, the difference is the sample, not the method.
+first 1,000 images (7,538 objects), as do the two figures above.
 
 ---
 
