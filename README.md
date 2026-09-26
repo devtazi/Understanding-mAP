@@ -120,21 +120,34 @@ first 1,000 images (7,538 objects), as do the two figures above.
 
 ## 1. mAP cannot distinguish detectors that fail in opposite ways
 
-![Three detectors, one mAP](docs/figures/equivalence.png)
+![Metric values for three detectors calibrated to the same mAP](docs/figures/equivalence.png)
 
 The opening showed two detectors whose scores are misleading. This experiment shows the
 structural reason: many different detectors share one score, so the score cannot be read
 backwards.
 
-Three detectors are constructed, each committing exactly one kind of error and no other.
-Every box meant to be correct is the ground-truth box itself, so localisation noise
-cannot contaminate the comparison. Each has one knob, and each knob is bisected until
-mAP@0.50 lands on 0.500.
+Three detectors are constructed on the same 3,552 objects. Each commits exactly one of
+the three error types and none of the others:
+
+- **Missed objects.** Reports a subset of the objects and nothing else. Every box it
+  emits is the ground-truth box itself, so it never produces a false positive; its only
+  error is the objects it leaves out.
+- **Spurious boxes.** Reports every object exactly, then adds boxes placed three
+  box-widths away, overlapping nothing. It never misses an object and never misplaces
+  one; its only error is the boxes it adds.
+- **Mislocalised boxes.** Reports every object, but displaces a fraction of its boxes by
+  20% of their size, which puts them at IoU 0.471 and below the matching threshold. It
+  adds no box and omits no object; its only error is where the boxes sit.
+
+Emitting the ground-truth box itself wherever a box is meant to be correct keeps
+localisation noise out of the comparison: the mislocalised detector is the only one whose
+boxes are not exact. Each detector has a single parameter governing how often it commits
+its error, and that parameter is bisected until mAP@0.50 reaches 0.500.
 
 | | Missed objects | Spurious boxes | Mislocalised boxes |
 |---|---:|---:|---:|
-| What it does | reports 51.7% of objects, every box exact | reports every object, plus 1.40 spurious boxes each | reports every object, 35.4% of boxes below IoU 0.5 |
-| Knob solved for | `detect_rate` = 0.4990 | `ghost_rate` = 1.4023 | `error_rate` = 0.3457 |
+| Parameter solved for | `detect_rate` = 0.4990 | `ghost_rate` = 1.4023 | `error_rate` = 0.3457 |
+| Proportion affected | 48.3% of objects omitted | 1.40 extra boxes per object | 35.4% of boxes displaced |
 | Detections emitted | 1,837 | 8,533 | 3,552 |
 | Precision at score ≥ 0.05 | **1.000** | **0.416** | **0.646** |
 | Recall at score ≥ 0.05 | **0.517** | **1.000** | **0.646** |
@@ -146,20 +159,16 @@ neither. mAP@0.50 separates them by **0.0004** and mAP@[.50:.95] by **0.0026**. 
 over ten IoU thresholds does not help, because the thing being averaged is the same
 thing ten times.
 
-This is not a claim that mAP is sometimes misleading. It is the statement that mAP is
-**not injective**: the map from detector behaviour to score cannot be inverted, and a
-leaderboard position is therefore compatible with any of these three detectors. Which one
-was shipped is not recoverable from the number.
+The mapping from detector behaviour to score is therefore **not injective**. A given
+leaderboard position is compatible with all three detectors, and the number alone does
+not determine which one produced it.
 
-The practical consequence is the one that matters. Told only that a detector scores
-0.500, a practitioner cannot know whether to work on recall, on precision or on box
-regression - the three would be entirely different projects, and mAP gives no evidence
-for choosing between them. This is what is meant here by saying that mAP carries no
-information: not that the number is wrong, but that it is only a number, and that the
-question a practitioner actually has when a score is low - where does the loss come
-from, and what should change - is one mAP is not built to answer. Oksuz et al. list this
-first among AP's shortcomings: the *"inability to distinguish very different RP
-curves"* [6].
+This has a direct practical cost. Told only that a detector scores 0.500, a practitioner
+cannot determine whether to work on recall, on precision or on box regression, and those
+are three different projects. The score locates the detector on a scale without
+identifying what limits it, which is the sense in which mAP carries no information for
+the decision that normally follows a measurement. Oksuz et al. list this first among AP's
+shortcomings: the *"inability to distinguish very different RP curves"* [6].
 
 The reference illustration of the problem is Fig. 1 of the LRP paper, where three
 sketched detectors all reach AP = 0.5: *"Despite these very different characteristics,

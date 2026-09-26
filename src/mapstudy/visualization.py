@@ -300,44 +300,19 @@ def plot_equivalence(
         )
         ax.bar_label(bars, fmt="%.2f", fontsize=7, padding=2)
 
-    # The dotted line is the calibration itself: the first group sits on it exactly.
+    # The calibration level. The title names it, so the line carries no label of its own.
     ax.axhline(target_map, color="#2563eb", linestyle=":", linewidth=1.3)
-    ax.annotate(
-        f"calibrated to mAP@0.50 = {target_map:.2f}",
-        xy=(positions[0], target_map),
-        xytext=(0, 9),
-        textcoords="offset points",
-        ha="center",
-        fontsize=8.5,
-        color="#2563eb",
-    )
 
-    # A divider between what mAP sees and what the decomposed metrics see.
+    # Separates the calibrated metric from the decomposed ones; the axis labels name both.
     ax.axvline(0.5, color="#cbd5e1", linewidth=1.2)
-    ax.annotate(
-        "what the leaderboard reports",
-        xy=(0, 1.04),
-        ha="center",
-        fontsize=8.5,
-        color="#64748b",
-        style="italic",
-    )
-    ax.annotate(
-        "the same detections, decomposed",
-        xy=((len(EQUIVALENCE_PANELS) + 0.5) / 2, 1.04),
-        ha="center",
-        fontsize=8.5,
-        color="#64748b",
-        style="italic",
-    )
 
     ax.set_xticks(positions)
     ax.set_xticklabels([label for label, _, _ in EQUIVALENCE_PANELS], fontsize=8.5)
-    ax.set(ylabel="Metric value", ylim=(0, 1.12))
+    ax.set(ylabel="Metric value", ylim=(0, 1.05))
     ax.set_title(subtitle, fontsize=9.5, color="#475569")
     fig.suptitle(title, fontsize=13, y=0.97)
     ax.grid(alpha=0.25, axis="y")
-    # Below the axes: the top of the figure carries the two region labels instead.
+    # Below the axes, so the bars keep the full height of the plotting area.
     ax.legend(
         loc="upper center",
         bbox_to_anchor=(0.5, -0.09),

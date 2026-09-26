@@ -199,11 +199,9 @@ def equivalence_command(args: argparse.Namespace) -> None:
         plot_equivalence(
             members,
             target_map=args.target_map,
-            title="Three detectors with nothing in common, and one mAP",
-            subtitle=(
-                f"{payload['n_objects']} objects, seed {args.seed}. Each detector's knob was "
-                f"bisected until mAP@0.50 = {args.target_map:.2f}."
-            ),
+            title=f"Metric values for three detectors calibrated to mAP@0.50 = {args.target_map:.2f}",
+            # The title states the calibration, so the subtitle carries only the sample.
+            subtitle=f"{payload['n_objects']} objects, seed {args.seed}.",
             output=figure,
         )
     )
