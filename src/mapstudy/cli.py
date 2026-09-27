@@ -160,7 +160,7 @@ def sweep_command(args: argparse.Namespace) -> None:
     plt.close(
         plot_tide_breakdown(
             points,
-            title="What TIDE blames the lost AP on",
+            title="AP recoverable by fixing each error type",
             output=tide_figure,
             **common,
         )
