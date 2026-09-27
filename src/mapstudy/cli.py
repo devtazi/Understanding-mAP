@@ -112,7 +112,7 @@ SWEEPS = {
         "scenario": "b",
         "parameter": "n_hedges",
         "values": DEFAULT_HEDGE_COUNTS,
-        "title": "Metrics as redundant predictions pile up",
+        "title": "Metric values as redundant boxes are added per object",
         "subtitle": "Scenario B, one accurate box per object plus N low-confidence boxes around it",
         "x_label": "Spurious boxes added per object",
     },
@@ -276,7 +276,7 @@ def invariance_command(args: argparse.Namespace) -> None:
     plt.close(
         plot_interpolation_bias(
             bias,
-            title="What the monotone envelope adds, and how predictable it is",
+            title="AP added by the monotone envelope, by category size",
             subtitle=(
                 f"{payload['n_objects']} objects, {len(args.bias_seeds)} seeds pooled. "
                 "AP@0.50 with the envelope minus AP@0.50 without it, per category."
