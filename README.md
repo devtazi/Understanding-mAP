@@ -1,4 +1,4 @@
-# Understanding mAP: Exposing the Blind Spots of Mean Average Precision
+# Mean Average Precision in Object Detection: Blind Spots and Alternative Metrics
 
 [![CI](https://github.com/devtazi/Understanding-mAP/actions/workflows/ci.yml/badge.svg)](https://github.com/devtazi/Understanding-mAP/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
