@@ -176,7 +176,7 @@ the APs of these differently-behaving detectors are exactly the same (AP=0.5)"* 
 What is added here is that the equality is *solved for* rather than drawn, on real data,
 with the error profiles known exactly. Reproduce with `mapstudy equivalence`.
 
-## 2. mAP measures localisation only as a threshold test
+## 2. mAP@0.50 measures localisation only as a threshold test, and mAP@[.50:.95] only above it
 
 ![Metrics as localisation degrades](docs/figures/sweep_shift.png)
 
@@ -184,25 +184,40 @@ This is scenario A turned into a sweep. Instead of one shift of 20%, every box i
 shifted diagonally by a growing fraction of its size, so the IoU of *every* prediction is
 known in closed form (`r²/(2-r²)` with `r = 1 - shift`) and falls from 1.0 to 0.09.
 
-| IoU of every prediction | 0.68 | 0.57 | 0.52 | **0.47** | 0.43 |
-|---|---:|---:|---:|---:|---:|
-| mAP@0.50 | 1.000 | 0.996 | 0.994 | **0.003** | 0.003 |
-| oLRP ↓ | 0.639 | 0.869 | 0.968 | **0.999** | 0.999 |
+| IoU of every prediction | 1.00 | 0.82 | 0.68 | 0.57 | 0.52 | **0.47** | 0.32 | 0.09 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| mAP@0.50 | 1.000 | 1.000 | 1.000 | 0.996 | 0.994 | **0.003** | 0.002 | 0.001 |
+| mAP@[.50:.95] | 1.000 | 0.700 | 0.400 | 0.199 | 0.100 | **0.001** | 0.001 | 0.000 |
+| oLRP ↓ | 0.000 | 0.355 | 0.639 | 0.869 | 0.968 | **0.999** | 0.998 | 0.999 |
 
-Localisation quality drops by a third while mAP@0.50 moves by 0.006, then collapses to
-zero between two adjacent points. On either side of the threshold mAP@0.50 carries **no
-information at all** about localisation: it reports which side of 0.5 the boxes are on,
-and nothing else. mAP@[.50:.95] degrades in ten visible steps, one per threshold crossed,
-which is a staircase rather than a curve.
+**mAP@0.50 carries almost no information about localisation.** Across the eight sweep
+points above the threshold, where the IoU falls from 1.000 to 0.516, it moves by 0.006 in
+total, then collapses between two adjacent points. It reports which side of 0.50 the
+boxes sit on and little else. The shift putting the IoU exactly at 0.50 is
+`1 - sqrt(2/3) ≈ 0.1835`: a detector at `shift = 0.1834` scores about 1.0 and one at
+`shift = 0.1836` about 0.0, and no person looking at the two sets of boxes could tell
+them apart. Scenario A sits at `shift = 0.20`, just past the edge.
 
-The shift that puts IoU exactly at 0.5 is `1 - sqrt(2/3) ≈ 0.1835`. A detector at
-`shift = 0.1834` scores about 1.0 and a detector at `shift = 0.1836` scores about 0.0,
-and no person looking at the two sets of boxes could tell them apart. Scenario A sits at
-`shift = 0.20`, just past the edge.
+**mAP@[.50:.95] answers this above the threshold.** Averaging AP over the ten thresholds
+from 0.50 to 0.95 makes the score sensitive to how far above 0.50 each box sits: over the
+same eight points it moves by 0.900 and tracks the IoU closely. This is the standard
+response to the criticism above, and on this range it is a valid one. The criticism in
+this section is therefore directed at mAP@0.50, not at the COCO primary metric.
+
+**It stops working below the threshold.** All ten thresholds are at or above 0.50, so a
+box that falls under 0.50 fails every one of them. Across the seventeen sweep points
+below the threshold, where the IoU continues to fall from 0.471 to 0.087, mAP@[.50:.95]
+moves by **0.000**. A detector whose boxes are marginally too loose and one whose boxes
+are nowhere near their objects receive the same score.
+
+One limitation remains above the threshold: the response is a staircase of ten discrete
+steps rather than a continuous function, so a difference in localisation smaller than one
+threshold interval does not register at all.
 
 This is the second shortcoming Oksuz et al. list, the *"lack of directly measuring
 bounding box localization accuracy"* [6]. The oLRP column is included here only to show
-that the cliff is not inevitable; it is discussed in experiment 8.
+that a continuous response over the whole range is possible; it is discussed in
+experiment 8.
 
 ## 3. mAP ignores spatial hedging
 
@@ -263,10 +278,12 @@ but whether its confidence scores are well enough calibrated to separate them.**
 
 ![Metric values as near-identical boxes are added to every object](docs/figures/duplication.png)
 
-The previous experiment has an escape hatch: a reader can object that the detector is
-merely uncalibrated, and that a confidence threshold would remove the redundant boxes.
-This one closes it. Every object is covered by near-identical copies whose scores are
-drawn from **the same distribution as the accurate box**, so no threshold separates them.
+Experiment 3 remains open to one objection. The redundant boxes it adds are all less
+confident than the accurate ones, so a detector emitting them may be described as poorly
+calibrated rather than poorly evaluated, and a confidence threshold would remove them.
+The construction used here excludes that reading: every object is covered by
+near-identical copies whose confidence is drawn from **the same distribution as the
+accurate box**, so the two populations cannot be separated by any threshold.
 
 | Copies added per object | 0 | 1 | 4 | 16 | 64 |
 |---|---:|---:|---:|---:|---:|
@@ -402,27 +419,36 @@ fixed, and fixing localisation recovers what fixing anything else would not.
 three commensurable components at a usable operating point; TIDE attributes lost AP to
 six named causes. The experiment above needs both, and neither alone is sufficient.
 
-## 8. oLRP measures localisation where mAP only thresholds it
+## 8. oLRP responds continuously to localisation, and only above the threshold
 
-Experiment 2's sweep, with the range beyond the threshold now included:
+Experiment 2's sweep, with both mAP variants shown against oLRP:
 
 | shift | 0.000 | 0.050 | 0.100 | 0.150 | 0.175 | **0.200** | 0.300 | 0.600 |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
 | True IoU of every box | 1.000 | 0.822 | 0.681 | 0.566 | 0.516 | **0.471** | 0.325 | 0.087 |
 | mAP@0.50 | 1.000 | 1.000 | 1.000 | 0.996 | 0.994 | **0.003** | 0.002 | 0.001 |
+| mAP@[.50:.95] | 1.000 | 0.700 | 0.400 | 0.199 | 0.100 | **0.001** | 0.001 | 0.000 |
 | oLRP ↓ | 0.000 | 0.355 | 0.639 | 0.869 | 0.968 | **0.999** | 0.998 | 0.999 |
 
-Over `shift ∈ [0, 0.175]`, localisation quality halves, mAP@0.50 moves by 0.006 and oLRP
-traverses 0.00 to 0.97 monotonically. The measurement supports the case Oksuz et al. make:
-on this range oLRP is not marginally better than mAP, it is the difference between a
-metric that measures localisation and one that only reports which side of a threshold the
-boxes fall on.
+Against **mAP@0.50** the gap is wide: over `shift ∈ [0, 0.175]` localisation quality
+halves, mAP@0.50 moves by 0.006 and oLRP traverses 0.00 to 0.97 monotonically.
 
-**The right half of the table bounds that advantage.** Past the threshold, oLRP saturates
-at 0.999 while the true IoU keeps falling from 0.471 to 0.087. oLRP is continuous *above*
-the IoU threshold and blind *below* it, because its localisation term is normalised by
-`1 - 0.5` and counts only matched true positives. oLRP grades a detector that is nearly
-good enough, and says little about one that is far off.
+Against **mAP@[.50:.95]** it is much narrower, and the comparison should be stated
+carefully. Both track the IoU over that range. What separates them is granularity: oLRP
+varies continuously, while mAP@[.50:.95] can only change when a box crosses one of ten
+fixed thresholds, so it moves in steps of 0.1 and ignores any localisation difference
+smaller than 0.05 of IoU. That is a real advantage, but a modest one.
+
+**Below the threshold, neither metric helps.** Past IoU 0.50 the true IoU keeps falling
+from 0.471 to 0.087 while oLRP saturates at 0.999 and mAP@[.50:.95] sits at 0.001. oLRP's
+localisation term is normalised by `1 - 0.5` and counts only matched true positives, so it
+grades a detector that is nearly good enough and says little about one that is far off.
+The blindness experiment 2 attributes to mAP below the threshold applies to oLRP as well.
+
+The advantage that does survive the whole range is not the scalar but the decomposition:
+oLRP reports localisation as a **separate term**, so the score says how much of the error
+is due to loose boxes rather than to missing or spurious ones. mAP@[.50:.95] returns one
+number in which the three are already mixed. This is the point measured in experiment 7.
 
 ### What TIDE adds: not how much was lost, but why
 
@@ -498,7 +524,7 @@ outside the evidence above.
 
 | | | mAP | oLRP | TIDE |
 |---|---|---|---|---|
-| **Completeness** | Localisation | Binary at the IoU threshold (exp. 2) | Continuous above the threshold, saturated below (exp. 8) | Attributes lost AP to `Loc` above IoU 0.1, nothing below it (exp. 8) |
+| **Completeness** | Localisation | mAP@0.50 binary at the threshold; mAP@[.50:.95] tracks IoU above it in ten steps, blind below (exp. 2) | Continuous above the threshold, saturated below, and reported as a separate term (exp. 8) | Attributes lost AP to `Loc` above IoU 0.1, nothing below it (exp. 8) |
 | | FP vs FN | Merged into one curve, indistinguishable (exp. 1) | Separated: spreads 0.54 and 0.46 (exp. 7) | Separated, and by *kind* of FP: `Bkg`, `Dupe`, `Cls` (exp. 7) |
 | | Redundant boxes, high confidence | Floor at 0.740 under 65x duplication (exp. 4) | Reacts: 0.000 to 0.555 (exp. 9) | `Dupe` rises to 0.24 (exp. 9) |
 | | Spatial hedging, low confidence | Blind (exp. 3) | **Equally blind** (exp. 3) | **Equally blind** (exp. 3) |
