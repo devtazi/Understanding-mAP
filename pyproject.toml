@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "understanding-map"
 version = "1.0.0"
-description = "Controlled experiments on the blind spots of mean Average Precision in object detection."
+description = "Controlled experiments on where mAP fails as an object detection metric, and how far oLRP and TIDE do better."
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Adam Tazi" }, { name = "Mohamed Glissa" }]
@@ -28,7 +28,7 @@ notebook = ["ipykernel", "nbconvert"]
 mapstudy = "mapstudy.cli:main"
 
 [project.urls]
-Repository = "https://github.com/devtazi/Understanding-mAP"
+Repository = "https://github.com/devtazi/rethinking-object-detection-metrics"
 
 [tool.setuptools.packages.find]
 where = ["src"]

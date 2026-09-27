@@ -40,9 +40,7 @@ def test_knob_is_monotone_in_map(images, scenario):
     scores = []
     for fraction in (0.0, 0.25, 0.5, 0.75, 1.0):
         value = at_high + fraction * (at_low - at_high)
-        detections = generate_detections(
-            images, scenario, 0, per_object_rng=True, **{parameter: value}
-        )
+        detections = generate_detections(images, scenario, 0, per_object_rng=True, **{parameter: value})
         scores.append(mean_average_precision(ground_truths, detections, (0.5,)).value if detections else 0.0)
 
     assert scores == sorted(scores, reverse=True)

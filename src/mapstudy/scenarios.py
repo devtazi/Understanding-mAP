@@ -169,10 +169,7 @@ def generate_detections(
     if not per_object_rng:
         rng = np.random.default_rng(seed)
         return [
-            detection
-            for image in images
-            for gt in image.objects
-            for detection in detector(gt, image, rng)
+            detection for image in images for gt in image.objects for detection in detector(gt, image, rng)
         ]
 
     return [

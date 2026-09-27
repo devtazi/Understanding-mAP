@@ -1,6 +1,6 @@
 # Mean Average Precision in Object Detection: Blind Spots and Alternative Metrics
 
-[![CI](https://github.com/devtazi/Understanding-mAP/actions/workflows/ci.yml/badge.svg)](https://github.com/devtazi/Understanding-mAP/actions/workflows/ci.yml)
+[![CI](https://github.com/devtazi/rethinking-object-detection-metrics/actions/workflows/ci.yml/badge.svg)](https://github.com/devtazi/rethinking-object-detection-metrics/actions/workflows/ci.yml)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![COCO](https://img.shields.io/badge/dataset-MS--COCO%202017-lightgrey.svg)](https://cocodataset.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -763,8 +763,8 @@ the only quantity in the study that responded to every failure mode tested.
 # Getting started
 
 ```bash
-git clone https://github.com/devtazi/Understanding-mAP.git
-cd Understanding-mAP
+git clone https://github.com/devtazi/rethinking-object-detection-metrics.git
+cd rethinking-object-detection-metrics
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```

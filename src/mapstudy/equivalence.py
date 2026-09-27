@@ -76,9 +76,7 @@ def calibrate(
     ground_truths = [gt for image in images for gt in image.objects]
 
     def map_at(value: float) -> float:
-        detections = generate_detections(
-            images, scenario, seed, per_object_rng=True, **{parameter: value}
-        )
+        detections = generate_detections(images, scenario, seed, per_object_rng=True, **{parameter: value})
         if not detections:
             return 0.0
         return mean_average_precision(ground_truths, detections, (0.5,)).value
@@ -103,7 +101,12 @@ def calibrate(
     assert best is not None
     logger.info(
         "  %-13s %s = %.5f -> mAP@.50 = %.4f (%d iterations, |error| = %.1e)",
-        scenario, parameter, best.value, best.map50, best.iterations, abs(best.map50 - target_map),
+        scenario,
+        parameter,
+        best.value,
+        best.map50,
+        best.iterations,
+        abs(best.map50 - target_map),
     )
     return best
 

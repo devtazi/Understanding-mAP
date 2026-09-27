@@ -380,8 +380,7 @@ def plot_interpolation_bias(points, *, title: str, subtitle: str = "", output: P
     import numpy as np
 
     labels = [
-        f"{p.min_objects}–{p.max_objects}" if p.max_objects < 10**6 else f"{p.min_objects}+"
-        for p in points
+        f"{p.min_objects}–{p.max_objects}" if p.max_objects < 10**6 else f"{p.min_objects}+" for p in points
     ]
     means = np.array([p.bias_mean for p in points])
     stds = np.array([p.bias_std for p in points])
