@@ -121,10 +121,10 @@ SWEEPS = {
         "parameter": "hedge_max_score",
         "values": DEFAULT_HEDGE_MAX_SCORES,
         "title": "Metrics as spurious boxes stop being separable by confidence",
-        "subtitle": "Scenario B, four spurious boxes per object, scores drawn from U(0.10, x)",
-        "x_label": "Highest score a spurious box can reach",
+        "subtitle": "Scenario B, four spurious boxes per object, confidence drawn from U(0.10, x)",
+        "x_label": "Highest confidence a spurious box can reach",
         "threshold": 0.85,
-        "threshold_label": "lowest score of an accurate box",
+        "threshold_label": "lowest confidence of an accurate box",
     },
 }
 
@@ -234,10 +234,11 @@ def duplication_command(args: argparse.Namespace) -> None:
     plt.close(
         plot_duplication(
             points,
-            title="mAP has a floor that duplication cannot push through",
+            title="Metric values as near-identical boxes are added to every object",
+            # States the construction only; what it demonstrates belongs in the text.
             subtitle=(
-                f"{payload['n_objects']} objects, seed {args.seed}. Every copy draws its score from "
-                "the same distribution as the accurate box, so no threshold separates them."
+                f"{payload['n_objects']} objects, seed {args.seed}. Every copy draws its confidence "
+                "from the same distribution as the accurate box."
             ),
             output=figure,
         )

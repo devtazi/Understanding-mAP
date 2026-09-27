@@ -30,9 +30,9 @@ A detector nobody would deploy is given a perfect score, and a detector whose ev
 lands on its object is told it failed completely. The ordering the metric produces is
 the reverse of the one a person looking at the images would produce.
 
-**Why scenario B scores 1.000.** Each object receives one accurate box at a high
-confidence (IoU around 0.82, score in U(0.85, 0.95)) and four displaced boxes at low
-confidence (IoU at most 0.497 by construction, score in U(0.10, 0.40)). This pattern has
+**Why scenario B scores 1.000.** Each object receives one accurate box at high
+confidence (IoU around 0.82, confidence in U(0.85, 0.95)) and four displaced boxes at low
+confidence (IoU at most 0.497 by construction, confidence in U(0.10, 0.40)). This pattern has
 a name in the literature, *spatial hedging*; it is defined and cited in experiment 3.
 Average Precision ranks all detections by confidence and integrates precision against
 recall. The four spurious boxes rank below every accurate box, so they only enter the
@@ -149,8 +149,8 @@ its error, and that parameter is bisected until mAP@0.50 reaches 0.500.
 | Parameter solved for | `detect_rate` = 0.4990 | `ghost_rate` = 1.4023 | `error_rate` = 0.3457 |
 | Proportion affected | 48.3% of objects omitted | 1.40 extra boxes per object | 35.4% of boxes displaced |
 | Detections emitted | 1,837 | 8,533 | 3,552 |
-| Precision at score ≥ 0.05 | **1.000** | **0.416** | **0.646** |
-| Recall at score ≥ 0.05 | **0.517** | **1.000** | **0.646** |
+| Precision at confidence ≥ 0.05 | **1.000** | **0.416** | **0.646** |
+| Recall at confidence ≥ 0.05 | **0.517** | **1.000** | **0.646** |
 | **mAP@0.50** | **0.4999** | **0.4999** | **0.5003** |
 | **mAP@[.50:.95]** | **0.4999** | **0.4998** | **0.4972** |
 
@@ -225,7 +225,7 @@ same 3,552 objects.
 | mAP@0.50 | 1.000 | 1.000 | 1.000 | 1.000 |
 | mAP@[.50:.95] | 0.700 | 0.700 | 0.700 | 0.700 |
 | oLRP ↓ | 0.355 | 0.355 | 0.355 | 0.355 |
-| F1 at score ≥ 0.05 | 1.000 | 0.333 | 0.207 | 0.159 |
+| F1 at confidence ≥ 0.05 | 1.000 | 0.333 | 0.207 | 0.159 |
 
 Not one ranking-based metric reacts, to three decimal places, while the detector emits
 thirteen times more boxes. This confirms on COCO detection what Jena et al. report for
@@ -246,22 +246,22 @@ the measurement here agrees with the paper rather than contradicting it.
 
 ![Metrics as spurious boxes stop being separable](docs/figures/sweep_hedge-score.png)
 
-Keeping four spurious boxes per object and raising the top of their score range towards
+Keeping four spurious boxes per object and raising the top of their confidence range towards
 the accurate boxes' 0.85-0.95:
 
-| Highest score of a spurious box | 0.40 | 0.84 | **0.89** | 0.94 | 0.99 |
+| Highest confidence of a spurious box | 0.40 | 0.84 | **0.89** | 0.94 | 0.99 |
 |---|---:|---:|---:|---:|---:|
 | mAP@0.50 | 1.000 | 1.000 | **0.953** | 0.801 | 0.647 |
 | oLRP ↓ | 0.355 | 0.355 | **0.451** | 0.536 | 0.597 |
 | oLRP localisation ↓ | 0.178 | 0.178 | 0.178 | 0.178 | 0.178 |
 
-Nothing moves until the two score populations overlap, then every ranking metric degrades
+Nothing moves until the two confidence populations overlap, then every ranking metric degrades
 at once. **What these metrics measure is not whether a detector emits redundant boxes,
 but whether its confidence scores are well enough calibrated to separate them.**
 
 ## 4. mAP has a floor that duplication cannot cross
 
-![mAP saturates under duplication](docs/figures/duplication.png)
+![Metric values as near-identical boxes are added to every object](docs/figures/duplication.png)
 
 The previous experiment has an escape hatch: a reader can object that the detector is
 merely uncalibrated, and that a confidence threshold would remove the redundant boxes.
@@ -271,9 +271,9 @@ drawn from **the same distribution as the accurate box**, so no threshold separa
 | Copies added per object | 0 | 1 | 4 | 16 | 64 |
 |---|---:|---:|---:|---:|---:|
 | Detections for 3,552 objects | 3,552 | 7,104 | 17,760 | 60,384 | **230,880** |
-| Precision at score ≥ 0.05 | 1.000 | 0.500 | 0.200 | 0.071 | **0.031** |
+| Precision at confidence ≥ 0.05 | 1.000 | 0.500 | 0.200 | 0.071 | **0.031** |
 | **mAP@0.50** | 1.000 | 0.860 | 0.799 | 0.744 | **0.740** |
-| F1 at score ≥ 0.05 | 1.000 | 0.667 | 0.333 | 0.132 | **0.060** |
+| F1 at confidence ≥ 0.05 | 1.000 | 0.667 | 0.333 | 0.132 | **0.060** |
 
 **65 boxes per object, 230,880 detections for 3,552 objects, 97% of them wrong, and
 mAP@0.50 still reports 0.740.** The curve flattens after the first few copies and stops
@@ -295,7 +295,7 @@ The baseline detector's confidence scores are replaced by strictly increasing fu
 of themselves. The boxes, the labels and the order of the detections are untouched; only
 the numbers attached to them change.
 
-| Score transform | Resulting score range | mAP@0.50 | mAP@[.50:.95] | F1 at score ≥ 0.05 |
+| Confidence transform | Confidence range | mAP@0.50 | mAP@[.50:.95] | F1 at confidence ≥ 0.05 |
 |---|---|---:|---:|---:|
 | identity | [0.100, 1.000] | 0.643157 | 0.177631 | 0.772 |
 | `s³` | [0.001, 0.999] | 0.643157 | 0.177631 | 0.642 |
@@ -453,7 +453,7 @@ Experiment 4, with oLRP added:
 | **oLRP ↓** | 0.000 | 0.379 | 0.476 | 0.546 | **0.555** |
 | oLRP false positive ↓ | 0.000 | 0.245 | 0.285 | 0.305 | 0.301 |
 | **oLRP optimal threshold τ\*** | 0.211 | 0.471 | 0.763 | 0.925 | **0.981** |
-| F1 at score ≥ 0.05 | 1.000 | 0.667 | 0.333 | 0.132 | 0.060 |
+| F1 at confidence ≥ 0.05 | 1.000 | 0.667 | 0.333 | 0.132 | 0.060 |
 
 This is the clearest advantage oLRP shows as a scalar anywhere in the study. mAP degrades
 by 0.26 and stops; oLRP degrades by 0.56 and keeps moving. The reason oLRP works here and
@@ -474,7 +474,7 @@ part of oLRP that leaderboards discard.
 Experiment 5, with oLRP added. This is the place where oLRP's advantage is smallest and
 it is stated plainly:
 
-| Score transform | Score range | mAP@0.50 | oLRP ↓ | **τ\*** | F1 at ≥ 0.05 |
+| Confidence transform | Confidence range | mAP@0.50 | oLRP ↓ | **τ\*** | F1 at confidence ≥ 0.05 |
 |---|---|---:|---:|---:|---:|
 | identity | [0.100, 1.000] | 0.643157 | 0.8108 | **0.288** | 0.772 |
 | `s³` | [0.001, 0.999] | 0.643157 | 0.8108 | **0.074** | 0.642 |
@@ -653,7 +653,7 @@ docs/figures/              Figures used in this README
   bias the category distribution.
 - Experiment 1 calibrates on mAP@0.50. The three detectors also share mAP@[.50:.95] to
   within 0.003, but that is an observed consequence, not something imposed.
-- The operating point is reported at a single, arbitrary score threshold (0.05). A full
+- The operating point is reported at a single, arbitrary confidence threshold (0.05). A full
   precision-recall-versus-threshold analysis would be more informative.
 - mAP, oLRP and TIDE all rely on the same one-to-one matching between predictions and
   ground truths. In crowded scenes the matching itself can dominate the result, which is

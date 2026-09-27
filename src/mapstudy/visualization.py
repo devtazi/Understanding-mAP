@@ -22,7 +22,7 @@ METRIC_STYLES = {
     "map50": ("mAP@0.50", "#2563eb", "-"),
     "map": ("mAP@[0.50:0.95]", "#7c3aed", "-"),
     "lrp_quality": ("1 − oLRP", "#059669", "-"),
-    "f1": ("F1 at score ≥ 0.05", "#ea580c", "--"),
+    "f1": ("F1 at confidence ≥ 0.05", "#ea580c", "--"),
 }
 
 
