@@ -117,82 +117,19 @@ first 1,000 images (7,538 objects), as do the two figures above.
 
 ## The metrics compared
 
-mAP is assumed known. The two alternatives are defined here because Part 1 already
-reports their values.
+mAP is assumed known. Two alternatives are reported beside it from Part 1 onwards, and
+the minimum needed to read the tables is the following.
 
-### oLRP (Oksuz et al. [6])
+- **oLRP** is an *error* in [0, 1], zero for a perfect detector, and it is the minimum of
+  LRP over the confidence threshold. **τ\*** is the threshold attaining that minimum.
+  The score is reported with three components: localisation, false positive and false
+  negative.
+- **TIDE** returns no score. For each of six error types it returns the AP that would be
+  recovered if that error type alone were corrected, so a value of `Loc = 0.495` means
+  that repairing localisation and nothing else would return 0.495 of AP.
 
-LRP is an **error**, so lower is better, and it is bounded in [0, 1] with 0 for a perfect
-detector. It is evaluated at a confidence threshold τ, which fixes which detections are
-kept and therefore the counts of true positives, false positives and false negatives:
-
-```
-LRP(τ) = [ Σ_TP (1 - IoU) / (1 - 0.5) + FP(τ) + FN(τ) ] / [ TP(τ) + FP(τ) + FN(τ) ]
-```
-
-The numerator adds three quantities on a common scale: the looseness of the matched
-boxes, normalised by `1 - 0.5` so that a box exactly at the IoU threshold contributes 1;
-the number of false positives; and the number of false negatives. The denominator is the
-total number of decisions made, which turns the sum into a rate.
-
-**Optimal LRP** is the minimum of that error over every threshold, and **τ\*** is the
-threshold attaining it:
-
-```
-oLRP = min_τ LRP(τ)        τ* = argmin_τ LRP(τ)
-```
-
-Two consequences are used throughout. Computing oLRP requires locating τ\*, so the
-operating point is produced by the definition rather than added to it. And because oLRP
-is evaluated at the threshold that suits the detector best, detections that any threshold
-can discard cost it nothing, which is what experiment 3 measures.
-
-The score is reported with **three components**, each read at τ\*. `oLRP localisation`
-is the mean of `1 - IoU` over the matched boxes, reported without the `1 - 0.5`
-normalisation that appears in the formula above: scenario B, whose accurate boxes sit at
-IoU 0.822, gives 0.178. `oLRP false positive` is `1 - precision` and `oLRP false
-negative` is `1 - recall`, both at τ\*. Part 2 shows that these three carry the
-information the scalar does not.
-
-### TIDE (Bolya et al. [1])
-
-TIDE does not return a score. For each of six error types it returns **the AP that would
-be recovered if that error type alone were corrected**, every other error left in place.
-A value of `Loc = 0.495` therefore means that repairing localisation, and nothing else,
-would return 0.495 of AP. Two properties follow: the six values do not have to sum to the
-AP that was lost, and a detector can lose AP with every error type at zero, which is what
-happens in scenario B.
-
-With the default thresholds of 0.5 for a match and 0.1 for background, a detection that
-failed to match is assigned the first of these that applies:
-
-| Error | A detection that is not a true positive because | Correcting it means |
-|---|---|---|
-| `Loc` | its IoU with the best same-class object is between 0.1 and 0.5 | tightening the box |
-| `Cls` | it reaches IoU 0.5 on an object of *another* class | relabelling it |
-| `Dupe` | it reaches IoU 0.5 on a same-class object already matched by a more confident detection | suppressing it |
-| `Bkg` | its IoU is at most 0.1 with *every* object, of any class | not predicting it |
-| `Both` | none of the above applies: wrong class and insufficient IoU together | both of the above |
-| `Miss` | an object matched nothing, and no correction above would have recovered it | detecting it |
-
-The order matters: `Both` is the case left over once the others are excluded, and `Miss`
-counts only objects that no single correction could recover, so it is narrower than
-"object without a detection".
-
-### Fixed-threshold precision, recall and F1
-
-Computed at one confidence threshold, 0.05 unless stated. Unlike the three metrics above,
-these do not rank detections; they count every detection kept by the threshold. This is
-the only quantity in the study that responded to every failure mode tested.
-
-### Implementations
-
-| Metric | Implementation |
-|---|---|
-| mAP@.50, mAP@[.50:.95] | [`pycocotools`](https://github.com/cocodataset/cocoapi) and [`average_precision.py`](src/mapstudy/average_precision.py), which exposes the interpolation scheme and is tested to match `pycocotools` to 1e-9 |
-| oLRP, its components and τ\* | [`third_party/cocoeval_lrp.py`](src/mapstudy/third_party/cocoeval_lrp.py), the COCO evaluator extended with LRP |
-| TIDE | [`tidecv`](https://github.com/dbolya/tide). Its AP is COCO's interpolated AP, so it inherits the bias measured in experiment 6 |
-| Precision, recall, F1 | [`average_precision.py`](src/mapstudy/average_precision.py) |
+The formula for LRP, the rule assigning each TIDE error type and the implementations used
+are in [Metric definitions](#metric-definitions) at the end of this README.
 
 ---
 
@@ -743,6 +680,85 @@ false-positive term is **0.000**: the value is due entirely to the residual loca
 error of the accurate boxes. TIDE reports no error to correct, since it measures the AP
 that a correction would recover and there is none to recover. This is the limitation
 established in experiment 3, observed here on the scenario that motivates the study.
+
+# Metric definitions
+
+Referenced from [The metrics compared](#the-metrics-compared) in the front matter. mAP is
+assumed known; the two alternatives are defined in full below.
+
+## oLRP (Oksuz et al. [6])
+
+LRP is an **error**, so lower is better, and it is bounded in [0, 1] with 0 for a perfect
+detector. It is evaluated at a confidence threshold τ, which fixes which detections are
+kept and therefore the counts of true positives, false positives and false negatives:
+
+```
+LRP(τ) = [ Σ_TP (1 - IoU) / (1 - 0.5) + FP(τ) + FN(τ) ] / [ TP(τ) + FP(τ) + FN(τ) ]
+```
+
+The numerator adds three quantities on a common scale: the looseness of the matched
+boxes, normalised by `1 - 0.5` so that a box exactly at the IoU threshold contributes 1;
+the number of false positives; and the number of false negatives. The denominator is the
+total number of decisions made, which turns the sum into a rate.
+
+**Optimal LRP** is the minimum of that error over every threshold, and **τ\*** is the
+threshold attaining it:
+
+```
+oLRP = min_τ LRP(τ)        τ* = argmin_τ LRP(τ)
+```
+
+Two consequences are used throughout. Computing oLRP requires locating τ\*, so the
+operating point is produced by the definition rather than added to it. And because oLRP
+is evaluated at the threshold that suits the detector best, detections that any threshold
+can discard cost it nothing, which is what experiment 3 measures.
+
+The score is reported with **three components**, each read at τ\*. `oLRP localisation`
+is the mean of `1 - IoU` over the matched boxes, reported without the `1 - 0.5`
+normalisation that appears in the formula above: scenario B, whose accurate boxes sit at
+IoU 0.822, gives 0.178. `oLRP false positive` is `1 - precision` and `oLRP false
+negative` is `1 - recall`, both at τ\*. Part 2 shows that these three carry the
+information the scalar does not.
+
+## TIDE (Bolya et al. [1])
+
+TIDE does not return a score. For each of six error types it returns **the AP that would
+be recovered if that error type alone were corrected**, every other error left in place.
+A value of `Loc = 0.495` therefore means that repairing localisation, and nothing else,
+would return 0.495 of AP. Two properties follow: the six values do not have to sum to the
+AP that was lost, and a detector can lose AP with every error type at zero, which is what
+happens in scenario B.
+
+With the default thresholds of 0.5 for a match and 0.1 for background, a detection that
+failed to match is assigned the first of these that applies:
+
+| Error | A detection that is not a true positive because | Correcting it means |
+|---|---|---|
+| `Loc` | its IoU with the best same-class object is between 0.1 and 0.5 | tightening the box |
+| `Cls` | it reaches IoU 0.5 on an object of *another* class | relabelling it |
+| `Dupe` | it reaches IoU 0.5 on a same-class object already matched by a more confident detection | suppressing it |
+| `Bkg` | its IoU is at most 0.1 with *every* object, of any class | not predicting it |
+| `Both` | none of the above applies: wrong class and insufficient IoU together | both of the above |
+| `Miss` | an object matched nothing, and no correction above would have recovered it | detecting it |
+
+The order matters: `Both` is the case left over once the others are excluded, and `Miss`
+counts only objects that no single correction could recover, so it is narrower than
+"object without a detection".
+
+## Fixed-threshold precision, recall and F1
+
+Computed at one confidence threshold, 0.05 unless stated. Unlike the three metrics above,
+these do not rank detections; they count every detection kept by the threshold. This is
+the only quantity in the study that responded to every failure mode tested.
+
+## Implementations
+
+| Metric | Implementation |
+|---|---|
+| mAP@.50, mAP@[.50:.95] | [`pycocotools`](https://github.com/cocodataset/cocoapi) and [`average_precision.py`](src/mapstudy/average_precision.py), which exposes the interpolation scheme and is tested to match `pycocotools` to 1e-9 |
+| oLRP, its components and τ\* | [`third_party/cocoeval_lrp.py`](src/mapstudy/third_party/cocoeval_lrp.py), the COCO evaluator extended with LRP |
+| TIDE | [`tidecv`](https://github.com/dbolya/tide). Its AP is COCO's interpolated AP, so it inherits the bias measured in experiment 6 |
+| Precision, recall, F1 | [`average_precision.py`](src/mapstudy/average_precision.py) |
 
 # Getting started
 
